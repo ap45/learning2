@@ -1,0 +1,50 @@
+@Service
+public class ProfileService {
+    @Autowired
+    private ProfileRepository profileRepository;
+    @Autowired
+    private EntityManager entityManager;
+
+    public Profile getProfileDataByField(String fieldName, String fieldValue) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Profile> query = cb.createQuery(Profile.class);
+        Root<Profile> profileRoot = query.from(Profile.class);
+        
+        query.select(profileRoot);
+        
+        Join<Profile, ?> join = profileRoot.join(fieldName); // Assuming fieldName is one of the entity fields
+        
+        // Adding a condition to match the fieldValue
+        query.where(cb.equal(join.get("id"), Long.parseLong(fieldValue))); // Assuming "id" is the common identifier
+        
+        List<Profile> profiles = entityManager.createQuery(query).getResultList();
+        
+        if (!profiles.isEmpty()) {
+            return profiles.get(0);
+        }
+        
+        return null; // Return null if no matching profiles found
+    }
+}
+
+
+///// Controller //////
+
+
+@RestController
+@RequestMapping("/api/profiles")
+public class ProfileController {
+    @Autowired
+    private ProfileService profileService;
+
+    @GetMapping("/search")
+    public ResponseEntity<Profile> searchProfileData(@RequestParam String fieldName, @RequestParam String fieldValue) {
+        Profile profile = profileService.getProfileDataByField(fieldName, fieldValue);
+        
+        if (profile != null) {
+            return ResponseEntity.ok(profile);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+}
