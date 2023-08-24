@@ -1,29 +1,47 @@
+import javax.persistence.EntityManager;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+
 @Service
 public class ProfileService {
-    @Autowired
-    private ProfileRepository profileRepository;
+
     @Autowired
     private EntityManager entityManager;
 
-    public Profile getProfileDataByField(String fieldName, String fieldValue) {
+    public List<Object> searchAllTables(String columnName, String searchText) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Profile> query = cb.createQuery(Profile.class);
-        Root<Profile> profileRoot = query.from(Profile.class);
-        
-        query.select(profileRoot);
-        
-        Join<Profile, ?> join = profileRoot.join(fieldName); // Assuming fieldName is one of the entity fields
-        
-        // Adding a condition to match the fieldValue
-        query.where(cb.equal(join.get("id"), Long.parseLong(fieldValue))); // Assuming "id" is the common identifier
-        
-        List<Profile> profiles = entityManager.createQuery(query).getResultList();
-        
-        if (!profiles.isEmpty()) {
-            return profiles.get(0);
-        }
-        
-        return null; // Return null if no matching profiles found
+        CriteriaQuery<Object> query = cb.createQuery(Object.class);
+        List<Root<?>> roots = new ArrayList<>();
+        roots.add(query.from(Profile.class));
+        roots.add(query.from(Interest.class));
+        roots.add(query.from(Post.class));
+        roots.add(query.from(ContactInfo.class));
+
+        query.multiselect(roots);
+
+        List<Predicate> predicates = roots.stream()
+            .map(root -> createPredicate(root, columnName, searchText, cb))
+            .collect(Collectors.toList());
+
+        query.where(cb.or(predicates.toArray(new Predicate[0])));
+
+        TypedQuery<Object> typedQuery = entityManager.createQuery(query);
+
+        return typedQuery.getResultList();
+    }
+
+    private Predicate createPredicate(Root<?> root, String columnName, String searchText, CriteriaBuilder cb) {
+        Path<String> columnPath = root.get(columnName);
+        return cb.like(columnPath, "%" + searchText + "%");
     }
 }
 
@@ -34,17 +52,16 @@ public class ProfileService {
 @RestController
 @RequestMapping("/api/profiles")
 public class ProfileController {
+
     @Autowired
     private ProfileService profileService;
 
     @GetMapping("/search")
-    public ResponseEntity<Profile> searchProfileData(@RequestParam String fieldName, @RequestParam String fieldValue) {
-        Profile profile = profileService.getProfileDataByField(fieldName, fieldValue);
-        
-        if (profile != null) {
-            return ResponseEntity.ok(profile);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<List<Object>> searchAllTables(
+            @RequestParam String columnName,
+            @RequestParam String searchText
+    ) {
+        List<Object> searchResults = profileService.searchAllTables(columnName, searchText);
+        return ResponseEntity.ok(searchResults);
     }
 }
