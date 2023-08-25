@@ -1,0 +1,37 @@
+@Service
+public class SearchService {
+    @Autowired
+    private EntityManager entityManager;
+
+    public List<?> search(String columnName, String value) {
+        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Object> query = criteriaBuilder.createQuery(Object.class);
+
+        Root<?> root = getRootByColumnName(columnName, query);
+        query.select(root);
+
+        addPredicate(criteriaBuilder, root, columnName, value, query);
+
+        TypedQuery<Object> typedQuery = entityManager.createQuery(query);
+        return typedQuery.getResultList();
+    }
+
+    private Root<?> getRootByColumnName(String columnName, CriteriaQuery<?> query) {
+        Metamodel metamodel = entityManager.getMetamodel();
+        List<EntityType<?>> entityTypes = new ArrayList<>(metamodel.getEntities());
+
+        for (EntityType<?> entityType : entityTypes) {
+            if (entityType.getAttribute(columnName) != null) {
+                return query.from(entityType.getJavaType());
+            }
+        }
+        throw new IllegalArgumentException("Column name not found in any entity.");
+    }
+
+    private void addPredicate(CriteriaBuilder criteriaBuilder, Root<?> root,
+                              String columnName, String value, CriteriaQuery<?> query) {
+        Path<?> columnPath = root.get(columnName);
+        Predicate predicate = criteriaBuilder.equal(criteriaBuilder.lower(columnPath), value.toLowerCase());
+        query.where(predicate);
+    }
+}
