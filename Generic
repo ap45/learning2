@@ -34,3 +34,46 @@ public class SearchService {
         }
     }
 }
+
+
+
+
+
+
+@Service
+public class SearchService {
+    @Autowired
+    private EntityManager entityManager;
+
+    public List<?> search(String columnName, String value) {
+        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Object> query = criteriaBuilder.createQuery(Object.class);
+
+        Metamodel metamodel = entityManager.getMetamodel();
+
+        Root<?> root = query.from(getEntityClass(columnName, metamodel));
+        query.select(root);
+
+        addPredicate(criteriaBuilder, root, columnName, value, query);
+
+        TypedQuery<Object> typedQuery = entityManager.createQuery(query);
+        return typedQuery.getResultList();
+    }
+
+    private void addPredicate(CriteriaBuilder criteriaBuilder, Root<?> root,
+                              String columnName, String value, CriteriaQuery<?> query) {
+        Path<?> columnPath = root.get(columnName);
+        Predicate predicate = criteriaBuilder.equal(criteriaBuilder.lower(columnPath), value.toLowerCase());
+        query.where(predicate);
+    }
+
+    private Class<?> getEntityClass(String columnName, Metamodel metamodel) {
+        for (EntityType<?> entityType : metamodel.getEntities()) {
+            SingularAttribute<?, ?> attribute = entityType.getSingularAttribute(columnName, String.class);
+            if (attribute != null) {
+                return entityType.getJavaType();
+            }
+        }
+        throw new IllegalArgumentException("Column name not found in any entity.");
+    }
+}
