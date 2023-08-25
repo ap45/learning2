@@ -35,3 +35,46 @@ public class SearchService {
         query.where(predicate);
     }
 }
+
+
+
+
+@Service
+public class SearchService {
+    @Autowired
+    private EntityManager entityManager;
+
+    public List<?> search(String columnName, String value) {
+        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+        CriteriaQuery<?> query = criteriaBuilder.createQuery();
+
+        Metamodel metamodel = entityManager.getMetamodel();
+        EntityType<Profile> profileEntityType = metamodel.entity(Profile.class);
+
+        Root<?> root = query.from(profileEntityType);
+        
+        Predicate predicate = addPredicate(criteriaBuilder, root, columnName, value);
+        
+        query.select(root);
+        query.where(predicate);
+
+        TypedQuery<?> typedQuery = entityManager.createQuery(query);
+        return typedQuery.getResultList();
+    }
+
+    private Predicate addPredicate(CriteriaBuilder criteriaBuilder, Root<?> root,
+                                   String columnName, String value) {
+        Metamodel metamodel = entityManager.getMetamodel();
+
+        for (EntityType<?> entityType : metamodel.getEntities()) {
+            SingularAttribute<?, ?> attribute = entityType.getSingularAttribute(columnName, String.class);
+            if (attribute != null) {
+                Path<String> columnPath = root.get(attribute);
+                return criteriaBuilder.equal(criteriaBuilder.lower(columnPath), value.toLowerCase());
+            }
+        }
+        
+        // Return a dummy predicate if attribute is not found
+        return criteriaBuilder.disjunction();
+    }
+}
