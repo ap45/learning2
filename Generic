@@ -3,21 +3,34 @@ public class SearchService {
     @Autowired
     private EntityManager entityManager;
 
-    public List<Object[]> search(String columnName, String value) {
+    public List<?> search(String columnName, String value) {
         CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Object[]> query = criteriaBuilder.createQuery(Object[].class);
+        CriteriaQuery<?> query = criteriaBuilder.createQuery();
 
-        Root<Profile> profileRoot = query.from(Profile.class);
-        Join<Profile, Interests> interestsJoin = profileRoot.join("interests", JoinType.LEFT);
-        Join<Profile, Posts> postsJoin = profileRoot.join("posts", JoinType.LEFT);
-        Join<Profile, ContactInfo> contactInfoJoin = profileRoot.join("contactInfo", JoinType.LEFT);
+        Metamodel metamodel = entityManager.getMetamodel();
+        EntityType<Profile> profileEntityType = metamodel.entity(Profile.class);
 
-        query.multiselect(profileRoot, interestsJoin, postsJoin, contactInfoJoin);
-        
-        Expression<String> expression = profileRoot.get(columnName);
-        query.where(criteriaBuilder.equal(expression, value));
+        Root<?> root = query.from(profileEntityType);
+        query.select(root);
 
-        TypedQuery<Object[]> typedQuery = entityManager.createQuery(query);
+        addPredicate(criteriaBuilder, root, columnName, value, query);
+
+        TypedQuery<?> typedQuery = entityManager.createQuery(query);
         return typedQuery.getResultList();
+    }
+
+    private void addPredicate(CriteriaBuilder criteriaBuilder, Root<?> root,
+                              String columnName, String value, CriteriaQuery<?> query) {
+        Metamodel metamodel = entityManager.getMetamodel();
+
+        for (EntityType<?> entityType : metamodel.getEntities()) {
+            SingularAttribute<?, ?> attribute = entityType.getSingularAttribute(columnName, String.class);
+            if (attribute != null) {
+                Path<String> columnPath = root.get(attribute);
+                Predicate predicate = criteriaBuilder.equal(criteriaBuilder.lower(columnPath), value.toLowerCase());
+                query.where(predicate);
+                break;
+            }
+        }
     }
 }
