@@ -1,0 +1,23 @@
+@Service
+public class SearchService {
+    @Autowired
+    private EntityManager entityManager;
+
+    public List<Object[]> search(String columnName, String value) {
+        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Object[]> query = criteriaBuilder.createQuery(Object[].class);
+
+        Root<Profile> profileRoot = query.from(Profile.class);
+        Join<Profile, Interests> interestsJoin = profileRoot.join("interests", JoinType.LEFT);
+        Join<Profile, Posts> postsJoin = profileRoot.join("posts", JoinType.LEFT);
+        Join<Profile, ContactInfo> contactInfoJoin = profileRoot.join("contactInfo", JoinType.LEFT);
+
+        query.multiselect(profileRoot, interestsJoin, postsJoin, contactInfoJoin);
+        
+        Expression<String> expression = profileRoot.get(columnName);
+        query.where(criteriaBuilder.equal(expression, value));
+
+        TypedQuery<Object[]> typedQuery = entityManager.createQuery(query);
+        return typedQuery.getResultList();
+    }
+}
