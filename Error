@@ -78,3 +78,45 @@ public class SearchService {
         return criteriaBuilder.disjunction();
     }
 }
+///////
+@Service
+public class SearchService {
+    @Autowired
+    private EntityManager entityManager;
+
+    public List<?> search(String columnName, String value) {
+        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+        CriteriaQuery<?> query = criteriaBuilder.createQuery();
+
+        Metamodel metamodel = entityManager.getMetamodel();
+        EntityType<?> entityType = findEntityType(metamodel, columnName);
+
+        if (entityType != null) {
+            Root<?> root = query.from(entityType.getJavaType());
+            query.select(root);
+
+            Predicate predicate = createPredicate(criteriaBuilder, root, columnName, value);
+            query.where(predicate);
+
+            TypedQuery<?> typedQuery = entityManager.createQuery(query);
+            return typedQuery.getResultList();
+        } else {
+            return Collections.emptyList();
+        }
+    }
+
+    private EntityType<?> findEntityType(Metamodel metamodel, String columnName) {
+        for (EntityType<?> entityType : metamodel.getEntities()) {
+            if (entityType.getSingularAttribute(columnName, String.class) != null) {
+                return entityType;
+            }
+        }
+        return null;
+    }
+
+    private Predicate createPredicate(CriteriaBuilder criteriaBuilder, Root<?> root,
+                                      String columnName, String value) {
+        Path<String> columnPath = root.get(columnName);
+        return criteriaBuilder.equal(criteriaBuilder.lower(columnPath), value.toLowerCase());
+    }
+}
