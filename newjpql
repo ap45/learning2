@@ -1,0 +1,123 @@
+@Entity
+public class Profile {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long profileId;
+    private String name;
+    private LocalDate birthdate;
+
+    @OneToMany(mappedBy = "profile")
+    private List<Posts> posts;
+
+    @OneToOne(mappedBy = "profile", cascade = CascadeType.ALL)
+    private ContactInfo contactInfo;
+
+    @ManyToMany
+    @JoinTable(
+        name = "Profile_Interests",
+        joinColumns = @JoinColumn(name = "profile_id"),
+        inverseJoinColumns = @JoinColumn(name = "interest_id")
+    )
+    private List<Interests> interests;
+
+    // Getters and setters
+}
+
+@Entity
+public class Interests {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long interestId;
+    private String interestName;
+
+    @ManyToMany(mappedBy = "interests")
+    private List<Profile> profiles;
+
+    // Getters and setters
+}
+
+@Entity
+public class Posts {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long postId;
+
+    @ManyToOne
+    @JoinColumn(name = "profile_id")
+    private Profile profile;
+
+    private String postContent;
+
+    // Getters and setters
+}
+
+@Entity
+public class ContactInfo {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long contactId;
+
+    @OneToOne
+    @JoinColumn(name = "profile_id", unique = true)
+    private Profile profile;
+
+    private String email;
+    private String phone;
+
+    // Getters and setters
+}
+
+
+///////////////////////////////////////////////////////////////////
+
+
+@Repository
+public interface ProfileRepository extends JpaRepository<Profile, Long> {
+    // Custom query methods if needed
+}
+
+@Repository
+public interface InterestsRepository extends JpaRepository<Interests, Long> {
+}
+
+@Repository
+public interface PostsRepository extends JpaRepository<Posts, Long> {
+}
+
+@Repository
+public interface ContactInfoRepository extends JpaRepository<ContactInfo, Long> {
+}
+
+
+
+
+@Service
+public class ProfileService {
+    @Autowired
+    private ProfileRepository profileRepository;
+
+    public List<Object[]> searchDataInTables(String columnName, String value) {
+        String query = "SELECT p, i, po, c FROM Profile p LEFT JOIN p.interests i LEFT JOIN p.posts po LEFT JOIN p.contactInfo c " +
+                       "WHERE p." + columnName + " = :value";
+
+        TypedQuery<Object[]> typedQuery = entityManager.createQuery(query, Object[].class);
+        typedQuery.setParameter("value", value);
+
+        return typedQuery.getResultList();
+    }
+}
+
+
+@RestController
+@RequestMapping("/api/profile")
+public class ProfileController {
+    @Autowired
+    private ProfileService profileService;
+
+    @GetMapping("/search")
+    public ResponseEntity<List<Object[]>> searchByColumn(@RequestParam String columnName, @RequestParam String value) {
+        List<Object[]> result = profileService.searchDataInTables(columnName, value);
+        return ResponseEntity.ok(result);
+    }
+}
+
