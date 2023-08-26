@@ -28,6 +28,36 @@ public class ProfileService {
 }
 
 
+
+@Service
+public class ProfileService {
+    @Autowired
+    private ProfileRepository profileRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    public List<Profile> searchProfilesByColumnValue(String columnName, String value) {
+        String jpqlQuery = "SELECT p FROM Profile p " +
+                           "LEFT JOIN FETCH p.contactInfo c " +
+                           "WHERE p." + columnName + " = :value";
+
+        TypedQuery<Profile> query = entityManager.createQuery(jpqlQuery, Profile.class);
+        query.setParameter("value", value);
+
+        List<Profile> profiles = query.getResultList();
+
+        // Fetch other associations selectively for each profile
+        for (Profile profile : profiles) {
+            profile.getInterests().size(); // Fetch interests lazily if needed
+            profile.getPosts().size();      // Fetch posts lazily if needed
+        }
+
+        return profiles;
+    }
+}
+
+
 // ProfileController.java
 @RestController
 @RequestMapping("/api/profiles")
