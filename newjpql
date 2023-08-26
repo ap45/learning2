@@ -121,3 +121,10 @@ public class ProfileController {
     }
 }
 
+//////////
+String query = "SELECT p, i, po, c FROM Profile p " +
+                       "LEFT JOIN Interests i ON p.profileId = i.profile.profileId " +
+                       "LEFT JOIN Posts po ON p.profileId = po.profile.profileId " +
+                       "LEFT JOIN ContactInfo c ON p.profileId = c.profile.profileId " +
+                       "WHERE p." + columnName + " = :value";
+
