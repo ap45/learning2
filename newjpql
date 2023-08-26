@@ -128,3 +128,40 @@ String query = "SELECT p, i, po, c FROM Profile p " +
                        "LEFT JOIN ContactInfo c ON p.profileId = c.profile.profileId " +
                        "WHERE p." + columnName + " = :value";
 
+
+///////////////////////////////////////////////////////////
+
+@Repository
+public interface ProfileRepository extends JpaRepository<Profile, Long> {
+
+    @Query("SELECT p, i, po, c FROM Profile p " +
+           "LEFT JOIN p.interests i " +
+           "LEFT JOIN p.posts po " +
+           "LEFT JOIN p.contactInfo c " +
+           "WHERE p.:columnName = :value")
+    List<Object[]> searchDataInTables(@Param("columnName") String columnName, @Param("value") String value);
+}
+
+
+@Service
+public class ProfileService {
+    @Autowired
+    private ProfileRepository profileRepository;
+
+    public List<Object[]> searchDataInTables(String columnName, String value) {
+        return profileRepository.searchDataInTables(columnName, value);
+    }
+}
+@RestController
+@RequestMapping("/api/profile")
+public class ProfileController {
+    @Autowired
+    private ProfileService profileService;
+
+    @GetMapping("/search")
+    public ResponseEntity<List<Object[]>> searchByColumn(@RequestParam String columnName, @RequestParam String value) {
+        List<Object[]> result = profileService.searchDataInTables(columnName, value);
+        return ResponseEntity.ok(result);
+    }
+}
+
