@@ -1,3 +1,14 @@
+public class ProfileSearchResultDTO {
+    private Profile profile;
+    private List<Interests> interests;
+    private List<Posts> posts;
+    private ContactInfo contactInfo;
+
+    // Getters and setters
+}
+
+
+
 @Component
 public class SearchMapping {
     private final Map<String, Class<?>> columnToEntityMapping;
@@ -28,28 +39,33 @@ public class SearchService {
     @Autowired
     private SearchMapping searchMapping;
 
-    public List<Object> search(String columnName, String searchValue) {
+    public List<ProfileSearchResultDTO> search(String searchColumn, String searchValue) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Object> query = cb.createQuery(Object.class);
+        CriteriaQuery<ProfileSearchResultDTO> query = cb.createQuery(ProfileSearchResultDTO.class);
 
-        Class<?> entityClass = searchMapping.getEntityClass(columnName);
+        Root<Profile> profileRoot = query.from(Profile.class);
 
-        if (entityClass == null) {
+        Class<?> entityClass = searchMapping.getEntityClass(searchColumn);
+
+        if (entityClass != null) {
+            Join<Profile, Object> join = profileRoot.join(searchColumn, JoinType.LEFT);
+
+            Predicate searchPredicate = cb.like(join.get(searchColumn), "%" + searchValue + "%");
+
+            query.where(searchPredicate);
+            query.select(profileRoot);
+
+            TypedQuery<ProfileSearchResultDTO> typedQuery = entityManager.createQuery(query);
+            List<ProfileSearchResultDTO> searchResults = typedQuery.getResultList();
+
+            return searchResults;
+        } else {
             return Collections.emptyList();
         }
-
-        Root<?> root = query.from(entityClass);
-        Predicate searchPredicate = cb.like(root.get(columnName), "%" + searchValue + "%");
-
-        query.where(searchPredicate);
-        query.select(root);
-
-        TypedQuery<Object> typedQuery = entityManager.createQuery(query);
-        List<Object> results = typedQuery.getResultList();
-
-        return results;
     }
 }
+
+
 
 
 ///
