@@ -1,79 +1,81 @@
-@Service
-public class SearchService {
-    @Autowired
-    private EntityManager entityManager;
+@Component
+public class SearchMapping {
+    private final Map<String, Class<?>> columnToEntityMapping;
 
-    public List<?> search(String columnName, String value) {
-        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
-        CriteriaQuery<?> query = criteriaBuilder.createQuery();
-
-        Metamodel metamodel = entityManager.getMetamodel();
-        EntityType<Profile> profileEntityType = metamodel.entity(Profile.class);
-
-        Root<?> root = query.from(profileEntityType);
-        query.select(root);
-
-        addPredicate(criteriaBuilder, root, columnName, value, query);
-
-        TypedQuery<?> typedQuery = entityManager.createQuery(query);
-        return typedQuery.getResultList();
+    public SearchMapping() {
+        // Initialize the mapping of searchable columns to entity classes
+        columnToEntityMapping = new HashMap<>();
+        columnToEntityMapping.put("name", Profile.class);
+        columnToEntityMapping.put("interestName", Interests.class);
+        columnToEntityMapping.put("postText", Posts.class);
+        columnToEntityMapping.put("email", ContactInfo.class);
+        columnToEntityMapping.put("phone", ContactInfo.class);
+        // Add more columns and entities as needed
     }
 
-    private void addPredicate(CriteriaBuilder criteriaBuilder, Root<?> root,
-                              String columnName, String value, CriteriaQuery<?> query) {
-        Metamodel metamodel = entityManager.getMetamodel();
-
-        for (EntityType<?> entityType : metamodel.getEntities()) {
-            SingularAttribute<?, ?> attribute = entityType.getSingularAttribute(columnName, String.class);
-            if (attribute != null) {
-                Path<String> columnPath = root.get(attribute);
-                Predicate predicate = criteriaBuilder.equal(criteriaBuilder.lower(columnPath), value.toLowerCase());
-                query.where(predicate);
-                break;
-            }
-        }
+    public Class<?> getEntityClass(String columnName) {
+        return columnToEntityMapping.get(columnName);
     }
 }
 
 
-
-
-
-
+//////
 @Service
 public class SearchService {
     @Autowired
     private EntityManager entityManager;
 
-    public List<?> search(String columnName, String value) {
-        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Object> query = criteriaBuilder.createQuery(Object.class);
+    @Autowired
+    private SearchMapping searchMapping;
 
-        Metamodel metamodel = entityManager.getMetamodel();
+    public List<Object> search(String columnName, String searchValue) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Object> query = cb.createQuery(Object.class);
 
-        Root<?> root = query.from(getEntityClass(columnName, metamodel));
+        Class<?> entityClass = searchMapping.getEntityClass(columnName);
+
+        if (entityClass == null) {
+            return Collections.emptyList();
+        }
+
+        Root<?> root = query.from(entityClass);
+        Predicate searchPredicate = cb.like(root.get(columnName), "%" + searchValue + "%");
+
+        query.where(searchPredicate);
         query.select(root);
 
-        addPredicate(criteriaBuilder, root, columnName, value, query);
-
         TypedQuery<Object> typedQuery = entityManager.createQuery(query);
-        return typedQuery.getResultList();
-    }
+        List<Object> results = typedQuery.getResultList();
 
-    private void addPredicate(CriteriaBuilder criteriaBuilder, Root<?> root,
-                              String columnName, String value, CriteriaQuery<?> query) {
-        Path<?> columnPath = root.get(columnName);
-        Predicate predicate = criteriaBuilder.equal(criteriaBuilder.lower(columnPath), value.toLowerCase());
-        query.where(predicate);
+        return results;
     }
+}
 
-    private Class<?> getEntityClass(String columnName, Metamodel metamodel) {
-        for (EntityType<?> entityType : metamodel.getEntities()) {
-            SingularAttribute<?, ?> attribute = entityType.getSingularAttribute(columnName, String.class);
-            if (attribute != null) {
-                return entityType.getJavaType();
-            }
-        }
-        throw new IllegalArgumentException("Column name not found in any entity.");
+
+///
+
+
+package com.yourcompany.controller;
+
+import com.yourcompany.search.SearchService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api")
+public class SearchController {
+    @Autowired
+    private SearchService searchService;
+
+    @GetMapping("/search")
+    public ResponseEntity<Object> search(
+            @RequestParam String columnName,
+            @RequestParam String searchValue) {
+        Object searchResults = searchService.search(columnName, searchValue);
+        return ResponseEntity.ok(searchResults);
     }
 }
