@@ -1,0 +1,74 @@
+package com.example.demo.service;
+
+import com.example.demo.model.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import javax.persistence.EntityManager;
+import javax.persistence.criteria.*;
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class SearchService {
+
+    @Autowired
+    private EntityManager entityManager;
+
+    public List<Profile> search(String columnName, String searchTerm) {
+        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Profile> query = criteriaBuilder.createQuery(Profile.class);
+        Root<Profile> profileRoot = query.from(Profile.class);
+        
+        // Dynamically map the requested column to an entity attribute
+        Path<Object> columnPath = getColumnPath(profileRoot, columnName);
+
+        Predicate profilePredicate = criteriaBuilder.like(columnPath, "%" + searchTerm + "%");
+
+        query.distinct(true);
+        query.where(profilePredicate);
+
+        return entityManager.createQuery(query).getResultList();
+    }
+    
+    private <T> Path<Object> getColumnPath(Root<Profile> root, String columnName) {
+        switch (columnName) {
+            case "name":
+                return root.get(Profile_.name);
+            case "email":
+                Join<Profile, ContactInfo> contactInfoJoin = root.join(Profile_.contactInfoList, JoinType.LEFT);
+                return contactInfoJoin.get(ContactInfo_.email);
+            case "street":
+                Join<Profile, Address> addressJoin = root.join(Profile_.address, JoinType.LEFT);
+                return addressJoin.get(Address_.street);
+            // Add other cases for additional columns and entities
+            default:
+                throw new IllegalArgumentException("Invalid column name: " + columnName);
+        }
+    }
+}
+
+package com.example.demo.controller;
+
+import com.example.demo.model.Profile;
+import com.example.demo.service.SearchService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController
+public class SearchController {
+
+    @Autowired
+    private SearchService searchService;
+
+    @GetMapping("/search")
+    public List<Profile> search(
+            @RequestParam String columnName,
+            @RequestParam String searchTerm) {
+        return searchService.search(columnName, searchTerm);
+    }
+}
