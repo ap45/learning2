@@ -1,0 +1,142 @@
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class ColumnSelector {
+    private String uiKey;
+    private String dbKey;
+    private String dbSelectKey;
+    private boolean isExportable;
+
+    public ColumnSelector(String uiKey, String dbKey, String dbSelectKey, boolean isExportable) {
+        this.uiKey = uiKey;
+        this.dbKey = dbKey;
+        this.dbSelectKey = dbSelectKey;
+        this.isExportable = isExportable;
+    }
+
+    public String getUiKey() {
+        return uiKey;
+    }
+
+    public String getDbKey() {
+        return dbKey;
+    }
+
+    public String getDbSelectKey() {
+        return dbSelectKey;
+    }
+
+    public boolean isExportable() {
+        return isExportable;
+    }
+}
+
+public class ColumnSelectorMapper {
+    private Map<String, ColumnSelector> mapping;
+
+    public ColumnSelectorMapper() {
+        // Initialize the mapping with your UI key to ColumnSelector mappings
+        mapping = new HashMap<>();
+        mapping.put("uiKey1", new ColumnSelector("uiKey1", "dbKey1", "dbSelectKey1", true));
+        mapping.put("uiKey2", new ColumnSelector("uiKey2", "dbKey2", "dbSelectKey2", false));
+    }
+
+    public ColumnSelector getColumnSelector(String uiKey) {
+        return mapping.get(uiKey);
+    }
+}
+
+public class SearchQueryBuilder {
+    private ColumnSelectorMapper columnSelectorMapper;
+
+    public SearchQueryBuilder(ColumnSelectorMapper columnSelectorMapper) {
+        this.columnSelectorMapper = columnSelectorMapper;
+    }
+
+    public String buildWhereClause(List<SearchCriteria> criteriaList) {
+        StringBuilder whereClause = new StringBuilder();
+        boolean isFirstCriteria = true;
+
+        for (SearchCriteria criteria : criteriaList) {
+            if (!isFirstCriteria) {
+                whereClause.append(" AND ");
+            }
+
+            String uiKey = criteria.getQueryKey();
+            ColumnSelector columnSelector = columnSelectorMapper.getColumnSelector(uiKey);
+
+            if (columnSelector != null) {
+                String dbKey = columnSelector.getDbKey();
+                String dbSelectKey = columnSelector.getDbSelectKey();
+
+                whereClause.append(dbKey)
+                        .append(" ")
+                        .append(criteria.getQueryOperator())
+                        .append(" ");
+
+                if ("varchar".equalsIgnoreCase(dbSelectKey)) {
+                    whereClause.append("'");
+                }
+
+                whereClause.append(criteria.getQueryValue());
+
+                if ("varchar".equalsIgnoreCase(dbSelectKey)) {
+                    whereClause.append("'");
+                }
+
+                isFirstCriteria = false;
+            } else {
+                // Handle the case where no mapping is found for the UI key
+            }
+        }
+
+        return whereClause.toString();
+    }
+}
+
+public class SearchCriteria {
+    private String queryKey;
+    private String queryOperator;
+    private String queryValue;
+
+    public SearchCriteria(String queryKey, String queryOperator, String queryValue) {
+        this.queryKey = queryKey;
+        this.queryOperator = queryOperator;
+        this.queryValue = queryValue;
+    }
+
+    public String getQueryKey() {
+        return queryKey;
+    }
+
+    public String getQueryOperator() {
+        return queryOperator;
+    }
+
+    public String getQueryValue() {
+        return queryValue;
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        // Initialize the ColumnSelectorMapper
+        ColumnSelectorMapper columnSelectorMapper = new ColumnSelectorMapper();
+
+        // Initialize the SearchQueryBuilder with the ColumnSelectorMapper
+        SearchQueryBuilder searchQueryBuilder = new SearchQueryBuilder(columnSelectorMapper);
+
+        // Create your search criteria
+        List<SearchCriteria> searchCriteriaList = List.of(
+            new SearchCriteria("uiKey1", "=", "value1"),
+            new SearchCriteria("uiKey2", "=", "value2")
+        );
+
+        // Build the WHERE clause
+        String whereClause = searchQueryBuilder.buildWhereClause(searchCriteriaList);
+
+        // Use the whereClause in your SQL query
+        System.out.println("Generated WHERE clause: " + whereClause);
+    }
+}
