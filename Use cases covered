@@ -2,6 +2,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
 enum QueryOperator {
     EQUALS("="),
     NOT_EQUALS("!="),
@@ -23,10 +26,10 @@ enum QueryOperator {
 
 class SearchCriteria {
     private String queryKey;
-    private QueryOperator queryOperator;
+    private String queryOperator; // User-friendly operator as a string
     private String queryValue;
 
-    public SearchCriteria(String queryKey, QueryOperator queryOperator, String queryValue) {
+    public SearchCriteria(String queryKey, String queryOperator, String queryValue) {
         this.queryKey = queryKey;
         this.queryOperator = queryOperator;
         this.queryValue = queryValue;
@@ -36,7 +39,7 @@ class SearchCriteria {
         return queryKey;
     }
 
-    public QueryOperator getQueryOperator() {
+    public String getQueryOperator() {
         return queryOperator;
     }
 
@@ -98,7 +101,12 @@ class ColumnSelectorMapper {
     }
 }
 
-public class QueryBuilder {
+@SpringBootApplication
+public class QueryBuilderApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(QueryBuilderApplication.class, args);
+    }
 
     public static String buildWhereClause(List<SearchCriteria> criteriaList, ColumnSelectorMapper columnSelectorMapper) {
         StringBuilder whereClause = new StringBuilder("WHERE ");
@@ -106,8 +114,11 @@ public class QueryBuilder {
 
         for (SearchCriteria criteria : criteriaList) {
             String queryKey = criteria.getQueryKey();
-            QueryOperator queryOperator = criteria.getQueryOperator();
+            String queryOperatorString = criteria.getQueryOperator(); // User-friendly operator as a string
             String queryValue = criteria.getQueryValue();
+
+            // Map user-friendly operator string to QueryOperator enum
+            QueryOperator queryOperator = mapOperator(queryOperatorString);
 
             ColumnSelector columnSelector = columnSelectorMapper.getColumnSelector(queryKey);
             if (columnSelector != null) {
@@ -155,16 +166,24 @@ public class QueryBuilder {
         return whereClause.toString();
     }
 
-    public static void main(String[] args) {
-        ColumnSelectorMapper columnSelectorMapper = new ColumnSelectorMapper();
-
-        List<SearchCriteria> searchCriteriaList = List.of(
-            new SearchCriteria("uiKey1", QueryOperator.EQUALS, "value1"),
-            new SearchCriteria("uiKey2", QueryOperator.CONTAINS, "value2"),
-            new SearchCriteria("uiKey3", QueryOperator.BETWEEN, "2023-01-01,2023-12-31")
-        );
-
-        String whereClause = buildWhereClause(searchCriteriaList, columnSelectorMapper);
-        System.out.println("Generated WHERE clause: " + whereClause);
+    // Mapping function to map user-friendly operator strings to QueryOperator enum
+    public static QueryOperator mapOperator(String operatorString) {
+        switch (operatorString.toLowerCase()) {
+            case "=":
+                return QueryOperator.EQUALS;
+            case "!=":
+                return QueryOperator.NOT_EQUALS;
+            case "contains":
+                return QueryOperator.CONTAINS;
+            case "not contains":
+                return QueryOperator.NOT_CONTAINS;
+            case "between":
+                return QueryOperator.BETWEEN;
+            case "not between":
+                return QueryOperator.NOT_BETWEEN;
+            default:
+                // Handle unknown operators or provide a default value
+                return QueryOperator.EQUALS;
+        }
     }
 }
