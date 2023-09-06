@@ -1,0 +1,18 @@
+public static String buildPaginationQuery(List<SearchCriteria> criteriaList, ColumnSelectorMapper columnSelectorMapper, int pageNo, int pageSize, String orderByColumn) {
+    String whereClause = buildWhereClause(criteriaList, columnSelectorMapper);
+    
+    // Calculate the offset based on pageNo and pageSize
+    int offset = (pageNo - 1) * pageSize;
+
+    // Build the final SQL query with pagination and ordering
+    StringBuilder query = new StringBuilder("SELECT * FROM your_table ");
+    query.append(whereClause);
+
+    if (orderByColumn != null && !orderByColumn.isEmpty()) {
+        query.append(" ORDER BY ").append(orderByColumn);
+    }
+
+    query.append(" LIMIT ").append(pageSize).append(" OFFSET ").append(offset);
+
+    return query.toString();
+}
