@@ -1,1 +1,75 @@
 
+public static String buildWhereClause(List<SearchCriteria> criteriaList, ColumnSelectorMapper columnSelectorMapper) {
+    StringBuilder whereClause = new StringBuilder("WHERE ");
+    boolean firstCriteria = true;
+
+    for (SearchCriteria criteria : criteriaList) {
+        String queryKey = criteria.getQueryKey();
+        QueryOperator queryOperator = criteria.getQueryOperator();
+        String queryValue = criteria.getQueryValue();
+
+        ColumnSelector columnSelector = columnSelectorMapper.getColumnSelector(queryKey);
+        if (columnSelector != null) {
+            String dbKey = columnSelector.getDbKey();
+            String dbDataType = columnSelector.getDbDataType();
+            String sqlOperator = queryOperator.getSqlOperator();
+
+            if (!firstCriteria) {
+                whereClause.append(" AND ");
+            }
+
+            whereClause.append(dbKey).append(" ");
+
+            // Handling data type-specific operations
+            if (queryOperator == QueryOperator.EMPTY || queryOperator == QueryOperator.NOT_EMPTY) {
+                whereClause.append(sqlOperator);
+            } else if (queryOperator == QueryOperator.IN || queryOperator == QueryOperator.NOT_IN) {
+                // Check if the data type is appropriate for IN/NOT IN
+                if (dbDataType.equals("VARCHAR") || dbDataType.equals("INT")) {
+                    String[] values = queryValue.split(",");
+                    if (values.length > 0) {
+                        whereClause.append(sqlOperator).append(" (");
+                        for (int i = 0; i < values.length; i++) {
+                            if (i > 0) {
+                                whereClause.append(", ");
+                            }
+                            whereClause.append("'").append(values[i]).append("'");
+                        }
+                        whereClause.append(")");
+                    }
+                }
+            } else {
+                // Handle other operators based on data type
+                if (dbDataType.equals("VARCHAR")) {
+                    if (queryOperator == QueryOperator.CONTAINS || queryOperator == QueryOperator.NOT_CONTAINS) {
+                        whereClause.append(sqlOperator).append(" '%").append(queryValue).append("%'");
+                    } else {
+                        whereClause.append(sqlOperator).append(" '").append(queryValue).append("'");
+                    }
+                } else if (dbDataType.equals("INT")) {
+                    if (queryOperator == QueryOperator.BETWEEN || queryOperator == QueryOperator.NOT_BETWEEN) {
+                        String[] rangeValues = queryValue.split(",");
+                        if (rangeValues.length == 2) {
+                            whereClause.append(sqlOperator).append(" ").append(rangeValues[0]).append(" AND ").append(rangeValues[1]);
+                        }
+                    } else {
+                        whereClause.append(sqlOperator).append(" ").append(queryValue);
+                    }
+                } else if (dbDataType.equals("DATE")) {
+                    if (queryOperator == QueryOperator.BETWEEN || queryOperator == QueryOperator.NOT_BETWEEN) {
+                        String[] rangeValues = queryValue.split(",");
+                        if (rangeValues.length == 2) {
+                            whereClause.append(sqlOperator).append(" '").append(rangeValues[0]).append("' AND '").append(rangeValues[1]).append("'");
+                        }
+                    } else {
+                        whereClause.append(sqlOperator).append(" '").append(queryValue).append("'");
+                    }
+                }
+            }
+
+            firstCriteria = false;
+        }
+    }
+
+    return whereClause.toString();
+}
