@@ -73,3 +73,25 @@ public static String buildWhereClause(List<SearchCriteria> criteriaList, ColumnS
 
     return whereClause.toString();
 }
+
+
+
+SELECT
+    YourColumns,
+    (SELECT COUNT(*) FROM YourTable1
+     INNER JOIN YourTable2 ON YourTable1.JoinColumn = YourTable2.JoinColumn
+     INNER JOIN YourTable3 ON YourTable2.JoinColumn = YourTable3.JoinColumn
+     INNER JOIN YourTable4 ON YourTable3.JoinColumn = YourTable4.JoinColumn
+     INNER JOIN YourTable5 ON YourTable4.JoinColumn = YourTable5.JoinColumn) AS TotalRecords
+FROM
+    (SELECT
+        YourColumns,
+        ROW_NUMBER() OVER (ORDER BY YourOrderByColumn) AS RowNum
+    FROM
+        YourTable1
+        INNER JOIN YourTable2 ON YourTable1.JoinColumn = YourTable2.JoinColumn
+        INNER JOIN YourTable3 ON YourTable2.JoinColumn = YourTable3.JoinColumn
+        INNER JOIN YourTable4 ON YourTable3.JoinColumn = YourTable4.JoinColumn
+        INNER JOIN YourTable5 ON YourTable4.JoinColumn = YourTable5.JoinColumn) AS SubQuery
+WHERE
+    RowNum BETWEEN @Offset + 1 AND @Offset + @PageSize
