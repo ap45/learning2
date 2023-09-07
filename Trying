@@ -1,74 +1,56 @@
-package com.example.demo.service;
-
-import com.example.demo.model.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import javax.persistence.EntityManager;
-import javax.persistence.criteria.*;
+import org.springframework.jdbc.core.RowMapper;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.sql.Date;
 
-@Service
-public class SearchService {
-
-    @Autowired
-    private EntityManager entityManager;
-
-    public List<Profile> search(String columnName, String searchTerm) {
-        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Profile> query = criteriaBuilder.createQuery(Profile.class);
-        Root<Profile> profileRoot = query.from(Profile.class);
+public class SearchResultRowMapper implements RowMapper<SearchResult> {
+    @Override
+    public SearchResult mapRow(ResultSet rs, int rowNum) throws SQLException {
+        SearchResult searchResult = new SearchResult();
         
-        // Dynamically map the requested column to an entity attribute
-        Path<Object> columnPath = getColumnPath(profileRoot, columnName);
-
-        Predicate profilePredicate = criteriaBuilder.like(columnPath, "%" + searchTerm + "%");
-
-        query.distinct(true);
-        query.where(profilePredicate);
-
-        return entityManager.createQuery(query).getResultList();
-    }
-    
-    private <T> Path<Object> getColumnPath(Root<Profile> root, String columnName) {
-        switch (columnName) {
-            case "name":
-                return root.get(Profile_.name);
-            case "email":
-                Join<Profile, ContactInfo> contactInfoJoin = root.join(Profile_.contactInfoList, JoinType.LEFT);
-                return contactInfoJoin.get(ContactInfo_.email);
-            case "street":
-                Join<Profile, Address> addressJoin = root.join(Profile_.address, JoinType.LEFT);
-                return addressJoin.get(Address_.street);
-            // Add other cases for additional columns and entities
-            default:
-                throw new IllegalArgumentException("Invalid column name: " + columnName);
+        searchResult.setFirstName(rs.getString("firstName"));
+        searchResult.setLastName(rs.getString("lastName"));
+        
+        // Assuming nationalities is stored as a comma-separated string in the database
+        String nationalitiesStr = rs.getString("nationalities");
+        if (nationalitiesStr != null && !nationalitiesStr.isEmpty()) {
+            String[] nationalityArray = nationalitiesStr.split(",");
+            List<String> nationalityList = new ArrayList<>();
+            for (String nationality : nationalityArray) {
+                nationalityList.add(nationality.trim());
+            }
+            searchResult.setNationalities(nationalityList);
+        } else {
+            searchResult.setNationalities(new ArrayList<>());
         }
-    }
-}
-
-package com.example.demo.controller;
-
-import com.example.demo.model.Profile;
-import com.example.demo.service.SearchService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
-
-@RestController
-public class SearchController {
-
-    @Autowired
-    private SearchService searchService;
-
-    @GetMapping("/search")
-    public List<Profile> search(
-            @RequestParam String columnName,
-            @RequestParam String searchTerm) {
-        return searchService.search(columnName, searchTerm);
+        
+        searchResult.setStatus(rs.getString("status"));
+        searchResult.setSourceListName(rs.getString("sourceListName"));
+        searchResult.setComplianceUnit(rs.getString("complianceUnit"));
+        searchResult.setDomicile(rs.getString("domicile"));
+        searchResult.setCreationDate(rs.getDate("creationDate"));
+        searchResult.setUpdatedDate(rs.getDate("updatedDate"));
+        searchResult.setProfileID(rs.getInt("profileID"));
+        searchResult.setOwnershipCountry(rs.getString("ownershipCountry"));
+        searchResult.setOwnershipDivision(rs.getString("ownershipDivision"));
+        
+        // Assuming dob is stored as a list of dates in the database
+        List<Date> dobList = new ArrayList<>();
+        String dobStr = rs.getString("dob");
+        if (dobStr != null && !dobStr.isEmpty()) {
+            String[] dobArray = dobStr.split(",");
+            for (String dob : dobArray) {
+                dobList.add(Date.valueOf(dob.trim()));
+            }
+        }
+        searchResult.setDob(dobList);
+        
+        searchResult.setOnboardingCategory(rs.getString("onboardingCategory"));
+        searchResult.setTotalRowCount(rs.getLong("totalRowCount"));
+        searchResult.setNotes(rs.getString("notes"));
+        
+        return searchResult;
     }
 }
