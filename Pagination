@@ -16,3 +16,35 @@ public static String buildPaginationQuery(List<SearchCriteria> criteriaList, Col
 
     return query.toString();
 }
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+public WorkbenchResponse<T> getWorkbenchData(WorkbenchRequest workbenchRequest) {
+    WorkbenchResponse<T> workbenchResponse = new WorkbenchResponse<>();
+
+    QueryGenerator queryGenerator = queryGeneratorFactory.getQueryGenerator(workbenchRequest.getGridlo());
+    queryGenerator.setColumnSelector(columnSelectorFactory.getColumnSelecor(workbenchRequest.getGridID()));
+    queryGenerator.setWorkbenchRequest(workbenchRequest);
+
+    List<Object> fieldValues = workbenchRequest.getSearchCriteriaList().stream()
+            .map(cri -> cri.getQueryvalue())
+            .collect(Collectors.toList());
+
+    List<T> resultList = workbenchDao.getWorkbenchData(workbenchRequest.getGridID(), queryGenerator.buildquery(), fieldValues);
+
+    if (!resultList.isEmpty()) {
+        workbenchResponse.setData(resultList);
+
+        // Calculate totalElements from the first SearchResult in the resultList
+        long totalElements = ((SearchResult) resultList.get(0)).getTotalRowCount();
+        workbenchResponse.setTotalElements(totalElements);
+
+        // Calculate totalPages based on pageSize
+        int pageSize = workbenchRequest.getPagesize();
+        int totalPages = (int) Math.ceil((double) totalElements / pageSize);
+        workbenchResponse.setTotalPages(totalPages);
+    }
+
+    return workbenchResponse;
+}
