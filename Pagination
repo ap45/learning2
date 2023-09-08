@@ -51,8 +51,8 @@ public WorkbenchResponse<T> getWorkbenchData(WorkbenchRequest workbenchRequest) 
 
 
 public String getSortDirection() {
-    SortDirection sortOrder = workbenchRequest.getSortDirectionList();
     String sortColumn = workbenchRequest.getSortColumn();
+    String sortDirectionStr = workbenchRequest.getSortDirectionList();
     SortDirection sortDirection;
 
     if (sortColumn == null || sortColumn.isEmpty()) {
@@ -63,10 +63,15 @@ public String getSortDirection() {
         sortColumn = (dbKey != null && !dbKey.isEmpty()) ? dbKey : "PR_CREATED_ON";
     }
 
-    if (sortOrder == null || sortOrder.toString().isEmpty()) {
+    if (sortDirectionStr == null || sortDirectionStr.isEmpty()) {
         sortDirection = SortDirection.DESC; // Set default sorting direction to "DESC"
     } else {
-        sortDirection = sortOrder;
+        // Convert the string to the SortDirection enum value
+        try {
+            sortDirection = SortDirection.valueOf(sortDirectionStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            sortDirection = SortDirection.DESC; // Set default if the conversion fails
+        }
     }
 
     String sort = " ORDER BY " + sortColumn + " " + sortDirection.toString();
