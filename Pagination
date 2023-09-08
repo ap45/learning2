@@ -48,3 +48,27 @@ public WorkbenchResponse<T> getWorkbenchData(WorkbenchRequest workbenchRequest) 
 
     return workbenchResponse;
 }
+
+
+public String getSortDirection() {
+    SortDirection sortOrder = workbenchRequest.getSortDirectionList();
+    String sortColumn = workbenchRequest.getSortColumn();
+    SortDirection sortDirection;
+
+    if (sortColumn == null || sortColumn.isEmpty()) {
+        sortColumn = "PR_CREATED_ON"; // Set default sorting column to "PR_CREATED_ON"
+    } else {
+        // Attempt to get the equivalent DB key from columnSelector
+        String dbKey = columnSelector.getColumnMetaData(sortColumn).getDBKey();
+        sortColumn = (dbKey != null && !dbKey.isEmpty()) ? dbKey : "PR_CREATED_ON";
+    }
+
+    if (sortOrder == null || sortOrder.toString().isEmpty()) {
+        sortDirection = SortDirection.DESC; // Set default sorting direction to "DESC"
+    } else {
+        sortDirection = sortOrder;
+    }
+
+    String sort = " ORDER BY " + sortColumn + " " + sortDirection.toString();
+    return sort;
+}
