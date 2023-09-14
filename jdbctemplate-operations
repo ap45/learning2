@@ -1,0 +1,48 @@
+public StringBuilder getWhereClause() {
+    List<String> fieldNames = workbenchRequest.getSearchCriterialist().stream()
+            .map(cri -> cri.getQueryKey())
+            .collect(Collectors.toList());
+
+    List<String> dbNames = fieldNames.stream()
+            .map(name -> columnSelector.getColumnMetaData(name).getDBKey())
+            .collect(Collectors.toList());
+
+    List<String> comparisonOperators = workbenchRequest.getSearchCriterialist().stream()
+            .map(cri -> mapOperator(cri.getQueryOperator()))
+            .collect(Collectors.toList());
+
+    StringBuilder sql = new StringBuilder(" ");
+
+    boolean firstCondition = true;
+
+    for (int i = 0; i < dbNames.size(); i++) {
+        if (!firstCondition) {
+            sql.append(" AND ");
+        } else {
+            firstCondition = false;
+        }
+
+        sql.append(dbNames.get(i)).append(" ").append(comparisonOperators.get(i));
+
+        String queryValue = workbenchRequest.getSearchCriterialist().get(i).getQueryValue();
+
+        if ("between".equalsIgnoreCase(comparisonOperators.get(i))) {
+            String[] values = queryValue.split(",");
+            if (values.length == 2) {
+                sql.append(" '").append(values[0]).append("' AND '").append(values[1]).append("'");
+            }
+        } else if ("contains".equalsIgnoreCase(comparisonOperators.get(i)) ||
+                   "does not contain".equalsIgnoreCase(comparisonOperators.get(i))) {
+            sql.append(" '%").append(queryValue).append("%'");
+        } else if ("empty".equalsIgnoreCase(comparisonOperators.get(i))) {
+            sql.append(" IS NULL");
+        } else if ("is not empty".equalsIgnoreCase(comparisonOperators.get(i))) {
+            sql.append(" IS NOT NULL");
+        } else {
+            // Handle other operators here, if needed.
+            sql.append("param").append(i);
+        }
+    }
+
+    return sql;
+}
