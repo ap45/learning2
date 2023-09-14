@@ -24,7 +24,8 @@ public StringBuilder getWhereClause() {
 
         sql.append(dbNames.get(i)).append(" ").append(comparisonOperators.get(i));
 
-        String queryValue = workbenchRequest.getSearchCriterialist().get(i).getQueryValue();
+        Object queryValueObj = workbenchRequest.getSearchCriterialist().get(i).getQueryValue();
+        String queryValue = queryValueObj != null ? queryValueObj.toString() : "";
 
         if ("between".equalsIgnoreCase(comparisonOperators.get(i))) {
             String[] values = queryValue.split(",");
