@@ -77,3 +77,63 @@ public StringBuilder getWhereClause() {
 
     return sql;
 }
+
+
+
+
+////////////////////////////////////////////
+
+
+public StringBuilder getWhereClause() {
+    StringBuilder sql = new StringBuilder();
+
+    boolean firstCondition = true;
+
+    List<SearchCriteria> searchCriteriaList = workbenchRequest.getSearchCriterialist();
+
+    for (int i = 0; i < searchCriteriaList.size(); i++) {
+        if (!firstCondition) {
+            sql.append(" AND ");
+        } else {
+            firstCondition = false;
+        }
+
+        SearchCriteria criteria = searchCriteriaList.get(i);
+
+        String dbName = columnSelector.getColumnMetaData(criteria.getQueryKey()).getDBKey();
+        String operator = mapOperator(criteria.getQueryOperator());
+        Object queryValueObj = criteria.getQueryValue();
+
+        sql.append(dbName).append(" ").append(operator).append(" ");
+
+        if ("between".equalsIgnoreCase(operator)) {
+            String[] values = queryValueObj.toString().split(",");
+            if (values.length == 2) {
+                sql.append("'").append(values[0]).append("' AND '").append(values[1]).append("'");
+            }
+        } else if ("in".equalsIgnoreCase(operator) || "not in".equalsIgnoreCase(operator)) {
+            sql.append("(");
+            if (queryValueObj instanceof Object[]) {
+                Object[] values = (Object[]) queryValueObj;
+                sql.append(Arrays.stream(values)
+                        .map(value -> (value instanceof String || value instanceof Date) ? "'" + value + "'" : String.valueOf(value))
+                        .collect(Collectors.joining(", ")));
+            } else {
+                sql.append((queryValueObj instanceof String || queryValueObj instanceof Date) ? "'" + queryValueObj + "'" : queryValueObj);
+            }
+            sql.append(")");
+        } else if ("like".equalsIgnoreCase(operator) || "not like".equalsIgnoreCase(operator)) {
+            sql.append(" '%").append(queryValueObj).append("%'");
+        } else if ("empty".equalsIgnoreCase(operator)) {
+            sql.append(" IS NULL");
+        } else if ("is not empty".equalsIgnoreCase(operator)) {
+            sql.append(" IS NOT NULL");
+        } else {
+            // Handle other operators here, if needed.
+            sql.append("param").append(i);
+        }
+    }
+
+    return sql;
+}
+
