@@ -83,50 +83,53 @@ public StringBuilder getWhereClause() {
 
 ////////////////////////////////////////////
 
-
 public StringBuilder getWhereClause() {
-    StringBuilder sql = new StringBuilder();
+    List<String> fieldNames = workbenchRequest.getSearchCriterialist().stream()
+            .map(cri -> cri.getQueryKey())
+            .collect(Collectors.toList());
+
+    List<String> dbNames = fieldNames.stream()
+            .map(name -> columnSelector.getColumnMetaData(name).getDBKey())
+            .collect(Collectors.toList());
+
+    List<String> comparisonOperators = workbenchRequest.getSearchCriterialist().stream()
+            .map(cri -> mapOperator(cri.getQueryOperator()))
+            .collect(Collectors.toList());
+
+    StringBuilder sql = new StringBuilder(" ");
 
     boolean firstCondition = true;
 
-    List<SearchCriteria> searchCriteriaList = workbenchRequest.getSearchCriterialist();
-
-    for (int i = 0; i < searchCriteriaList.size(); i++) {
+    for (int i = 0; i < dbNames.size(); i++) {
         if (!firstCondition) {
             sql.append(" AND ");
         } else {
             firstCondition = false;
         }
 
-        SearchCriteria criteria = searchCriteriaList.get(i);
+        sql.append(dbNames.get(i)).append(" ").append(comparisonOperators.get(i));
 
-        String dbName = columnSelector.getColumnMetaData(criteria.getQueryKey()).getDBKey();
-        String operator = mapOperator(criteria.getQueryOperator());
-        Object queryValueObj = criteria.getQueryValue();
+        Object queryValueObj = workbenchRequest.getSearchCriterialist().get(i).getQueryValue();
 
-        sql.append(dbName).append(" ").append(operator).append(" ");
-
-        if ("between".equalsIgnoreCase(operator)) {
+        if ("between".equalsIgnoreCase(comparisonOperators.get(i))) {
             String[] values = queryValueObj.toString().split(",");
             if (values.length == 2) {
-                sql.append("'").append(values[0]).append("' AND '").append(values[1]).append("'");
+                sql.append(" '").append(values[0]).append("' AND '").append(values[1]).append("'");
             }
-        } else if ("in".equalsIgnoreCase(operator) || "not in".equalsIgnoreCase(operator)) {
-            sql.append("(");
-            if (queryValueObj instanceof Object[]) {
-                Object[] values = (Object[]) queryValueObj;
-                sql.append(Arrays.stream(values)
-                        .map(value -> (value instanceof String || value instanceof Date) ? "'" + value + "'" : String.valueOf(value))
-                        .collect(Collectors.joining(", ")));
-            } else {
-                sql.append((queryValueObj instanceof String || queryValueObj instanceof Date) ? "'" + queryValueObj + "'" : queryValueObj);
-            }
-            sql.append(")");
-        } else if ("like".equalsIgnoreCase(operator) || "not like".equalsIgnoreCase(operator)) {
+        } else if ("in".equalsIgnoreCase(comparisonOperators.get(i))) {
+            sql.append(" (")
+                    .append(buildInValues(queryValueObj))
+                    .append(")");
+        } else if ("not in".equalsIgnoreCase(comparisonOperators.get(i))) {
+            sql.append(" NOT IN (")
+                    .append(buildInValues(queryValueObj))
+                    .append(")");
+        } else if ("like".equalsIgnoreCase(comparisonOperators.get(i)) ||
+                "not like".equalsIgnoreCase(comparisonOperators.get(i))) {
             sql.append(" '%").append(queryValueObj).append("%'");
-        } else if ("empty".equalsIgnoreCase(operator)) {
+        } else if ("empty".equalsIgnoreCase(comparisonOperators.get(i))) {
             sql.append(" IS NULL");
-        } else if ("is not empty".equalsIgnoreCase(operator)) {
+        } else if ("is not empty".equalsIgnoreCase(comparisonOperators.get(i))) {
             sql.append(" IS NOT NULL");
         } else {
             // Handle other operators here, if needed.
@@ -137,3 +140,26 @@ public StringBuilder getWhereClause() {
     return sql;
 }
 
+private String buildInValues(Object queryValueObj) {
+    if (queryValueObj instanceof Object[]) {
+        Object[] values = (Object[]) queryValueObj;
+        return Arrays.stream(values)
+                .map(value -> {
+                    if (value instanceof String || value instanceof Date) {
+                        return "'" + value + "'";
+                    } else {
+                        return String.valueOf(value);
+                    }
+                })
+                .collect(Collectors.joining(", "));
+    } else {
+        if (queryValueObj instanceof String || queryValueObj instanceof Date) {
+            return "'" + queryValueObj + "'";
+        } else {
+            return String.valueOf(queryValueObj);
+        }
+    }
+}
+
+    return sql;
+}
