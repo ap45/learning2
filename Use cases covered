@@ -1,189 +1,166 @@
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.function.BiFunction;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+public class WhereClauseBuilder {
+    private WorkbenchRequest workbenchRequest;
+    private ColumnSelector columnSelector;
 
-enum QueryOperator {
-    EQUALS("="),
-    NOT_EQUALS("!="),
-    CONTAINS("LIKE"),
-    NOT_CONTAINS("NOT LIKE"),
-    BETWEEN("BETWEEN"),
-    NOT_BETWEEN("NOT BETWEEN");
-
-    private final String sqlOperator;
-
-    QueryOperator(String sqlOperator) {
-        this.sqlOperator = sqlOperator;
+    public WhereClauseBuilder(WorkbenchRequest workbenchRequest, ColumnSelector columnSelector) {
+        this.workbenchRequest = workbenchRequest;
+        this.columnSelector = columnSelector;
     }
 
-    public String getSqlOperator() {
-        return sqlOperator;
-    }
-}
+    public StringBuilder getWhereClause() {
+        List<SearchCriteria> searchCriteriaList = workbenchRequest.getSearchCriterialist();
+        List<String> fieldNames = searchCriteriaList.stream()
+                .map(cri -> cri.getQueryKey())
+                .collect(Collectors.toList());
 
-class SearchCriteria {
-    private String queryKey;
-    private String queryOperator; // User-friendly operator as a string
-    private String queryValue;
+        List<String> dbNames = fieldNames.stream()
+                .map(name -> columnSelector.getColumnMetaData(name).getDBKey())
+                .collect(Collectors.toList());
 
-    public SearchCriteria(String queryKey, String queryOperator, String queryValue) {
-        this.queryKey = queryKey;
-        this.queryOperator = queryOperator;
-        this.queryValue = queryValue;
-    }
+        List<String> comparisonOperators = searchCriteriaList.stream()
+                .map(cri -> mapOperator(cri.getQueryOperator()))
+                .collect(Collectors.toList());
 
-    public String getQueryKey() {
-        return queryKey;
-    }
+        StringBuilder sql = new StringBuilder(" ");
 
-    public String getQueryOperator() {
-        return queryOperator;
-    }
+        boolean firstCondition = true;
 
-    public String getQueryValue() {
-        return queryValue;
-    }
-}
+        for (int i = 0; i < dbNames.size(); i++) {
+            if (!firstCondition) {
+                sql.append(" AND ");
+            } else {
+                firstCondition = false;
+            }
 
-class ColumnSelector {
-    private String uiKey;
-    private String dbKey;
-    private String dbSelectKey;
-    private boolean isExportable;
-    private String dbDataType; // SQL data type (e.g., VARCHAR, INT, DATE)
+            String operator = comparisonOperators.get(i);
+            BiFunction<String, Object, String> operatorFunction = null;
 
-    public ColumnSelector(String uiKey, String dbKey, String dbSelectKey, boolean isExportable, String dbDataType) {
-        this.uiKey = uiKey;
-        this.dbKey = dbKey;
-        this.dbSelectKey = dbSelectKey;
-        this.isExportable = isExportable;
-        this.dbDataType = dbDataType;
-    }
+            switch (operator) {
+                case "=":
+                    operatorFunction = OperatorStrategies::handleEquals;
+                    break;
+                case "!=":
+                    operatorFunction = OperatorStrategies::handleNotEquals;
+                    break;
+                case "contains":
+                    operatorFunction = OperatorStrategies::handleContains;
+                    break;
+                case "does not contain":
+                    operatorFunction = OperatorStrategies::handleDoesNotContain;
+                    break;
+                case "between":
+                    operatorFunction = OperatorStrategies::handleBetween;
+                    break;
+                case "not between":
+                    operatorFunction = OperatorStrategies::handleNotBetween;
+                    break;
+                case "in":
+                    operatorFunction = OperatorStrategies::handleIn;
+                    break;
+                case "not in":
+                    operatorFunction = OperatorStrategies::handleNotIn;
+                    break;
+                case "empty":
+                    operatorFunction = OperatorStrategies::handleEmpty;
+                    break;
+                case "is not empty":
+                    operatorFunction = OperatorStrategies::handleIsNotEmpty;
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unsupported UI operation: " + operator);
+            }
 
-    public String getUiKey() {
-        return uiKey;
-    }
-
-    public String getDbKey() {
-        return dbKey;
-    }
-
-    public String getDbSelectKey() {
-        return dbSelectKey;
-    }
-
-    public boolean isExportable() {
-        return isExportable;
-    }
-
-    public String getDbDataType() {
-        return dbDataType;
-    }
-}
-
-class ColumnSelectorMapper {
-    private Map<String, ColumnSelector> mapping;
-
-    public ColumnSelectorMapper() {
-        // Initialize the mapping with your UI key to ColumnSelector mappings
-        mapping = new HashMap<>();
-        mapping.put("uiKey1", new ColumnSelector("uiKey1", "dbKey1", "dbSelectKey1", true, "VARCHAR"));
-        mapping.put("uiKey2", new ColumnSelector("uiKey2", "dbKey2", "dbSelectKey2", false, "INT"));
-        mapping.put("uiKey3", new ColumnSelector("uiKey3", "dbKey3", "dbSelectKey3", true, "DATE"));
-        // Add more mappings as needed
-    }
-
-    public ColumnSelector getColumnSelector(String uiKey) {
-        return mapping.get(uiKey);
-    }
-}
-
-@SpringBootApplication
-public class QueryBuilderApplication {
-
-    public static void main(String[] args) {
-        SpringApplication.run(QueryBuilderApplication.class, args);
-    }
-
-    public static String buildWhereClause(List<SearchCriteria> criteriaList, ColumnSelectorMapper columnSelectorMapper) {
-        StringBuilder whereClause = new StringBuilder("WHERE ");
-        boolean firstCriteria = true;
-
-        for (SearchCriteria criteria : criteriaList) {
-            String queryKey = criteria.getQueryKey();
-            String queryOperatorString = criteria.getQueryOperator(); // User-friendly operator as a string
-            String queryValue = criteria.getQueryValue();
-
-            // Map user-friendly operator string to QueryOperator enum
-            QueryOperator queryOperator = mapOperator(queryOperatorString);
-
-            ColumnSelector columnSelector = columnSelectorMapper.getColumnSelector(queryKey);
-            if (columnSelector != null) {
-                String dbKey = columnSelector.getDbKey();
-                String dbDataType = columnSelector.getDbDataType();
-                String sqlOperator = queryOperator.getSqlOperator();
-
-                if (!firstCriteria) {
-                    whereClause.append(" AND ");
-                }
-
-                whereClause.append(dbKey).append(" ");
-
-                // Handling data type-specific operations
-                if (dbDataType.equals("VARCHAR")) {
-                    if (queryOperator == QueryOperator.CONTAINS || queryOperator == QueryOperator.NOT_CONTAINS) {
-                        whereClause.append(sqlOperator).append(" '%").append(queryValue).append("%'");
-                    } else {
-                        whereClause.append(sqlOperator).append(" '").append(queryValue).append("'");
-                    }
-                } else if (dbDataType.equals("INT")) {
-                    if (queryOperator == QueryOperator.BETWEEN || queryOperator == QueryOperator.NOT_BETWEEN) {
-                        String[] values = queryValue.split(",");
-                        if (values.length == 2) {
-                            whereClause.append(sqlOperator).append(" ").append(values[0]).append(" AND ").append(values[1]);
-                        }
-                    } else {
-                        whereClause.append(sqlOperator).append(" ").append(queryValue);
-                    }
-                } else if (dbDataType.equals("DATE")) {
-                    if (queryOperator == QueryOperator.BETWEEN || queryOperator == QueryOperator.NOT_BETWEEN) {
-                        String[] values = queryValue.split(",");
-                        if (values.length == 2) {
-                            whereClause.append(sqlOperator).append(" '").append(values[0]).append("' AND '").append(values[1]).append("'");
-                        }
-                    } else {
-                        whereClause.append(sqlOperator).append(" '").append(queryValue).append("'");
-                    }
-                }
-
-                firstCriteria = false;
+            if (operatorFunction != null) {
+                sql.append(operatorFunction.apply(dbNames.get(i), workbenchRequest.getSearchCriterialist().get(i).getQueryValue())).append("param").append(i);
+            } else {
+                throw new IllegalArgumentException("Unsupported UI operation: " + operator);
             }
         }
 
-        return whereClause.toString();
+        return sql;
+    }
+}
+
+
+/////////////////////
+
+import java.util.Arrays;
+import java.util.stream.Collectors;
+import java.util.function.BiFunction;
+
+public class OperatorStrategies {
+    public static String handleEquals(String dbName, Object queryValue) {
+        return dbName + " = " + formatQueryValue(queryValue);
     }
 
-    // Mapping function to map user-friendly operator strings to QueryOperator enum
-    public static QueryOperator mapOperator(String operatorString) {
-        switch (operatorString.toLowerCase()) {
-            case "=":
-                return QueryOperator.EQUALS;
-            case "!=":
-                return QueryOperator.NOT_EQUALS;
-            case "contains":
-                return QueryOperator.CONTAINS;
-            case "not contains":
-                return QueryOperator.NOT_CONTAINS;
-            case "between":
-                return QueryOperator.BETWEEN;
-            case "not between":
-                return QueryOperator.NOT_BETWEEN;
-            default:
-                // Handle unknown operators or provide a default value
-                return QueryOperator.EQUALS;
+    public static String handleNotEquals(String dbName, Object queryValue) {
+        return dbName + " != " + formatQueryValue(queryValue);
+    }
+
+    public static String handleContains(String dbName, Object queryValue) {
+        return dbName + " LIKE '%" + queryValue + "%'";
+    }
+
+    public static String handleDoesNotContain(String dbName, Object queryValue) {
+        return dbName + " NOT LIKE '%" + queryValue + "%'";
+    }
+
+    public static String handleBetween(String dbName, Object queryValue) {
+        String[] values = queryValue.toString().split(",");
+        if (values.length == 2) {
+            return dbName + " BETWEEN " + formatQueryValue(values[0]) + " AND " + formatQueryValue(values[1]);
+        } else {
+            throw new IllegalArgumentException("Invalid value for 'between' operator");
+        }
+    }
+
+    public static String handleNotBetween(String dbName, Object queryValue) {
+        String[] values = queryValue.toString().split(",");
+        if (values.length == 2) {
+            return dbName + " NOT BETWEEN " + formatQueryValue(values[0]) + " AND " + formatQueryValue(values[1]);
+        } else {
+            throw new IllegalArgumentException("Invalid value for 'not between' operator");
+        }
+    }
+
+    public static String handleIn(String dbName, Object queryValue) {
+        String formattedValues = formatQueryValues(queryValue);
+        return dbName + " IN (" + formattedValues + ")";
+    }
+
+    public static String handleNotIn(String dbName, Object queryValue) {
+        String formattedValues = formatQueryValues(queryValue);
+        return dbName + " NOT IN (" + formattedValues + ")";
+    }
+
+    public static String handleEmpty(String dbName, Object queryValue) {
+        return dbName + " IS NULL";
+    }
+
+    public static String handleIsNotEmpty(String dbName, Object queryValue) {
+        return dbName + " IS NOT NULL";
+    }
+
+    private static String formatQueryValue(Object queryValue) {
+        if (queryValue instanceof String || queryValue instanceof java.sql.Date) {
+            return "'" + queryValue + "'";
+        } else {
+            return String.valueOf(queryValue);
+        }
+    }
+
+    private static String formatQueryValues(Object queryValue) {
+        if (queryValue instanceof Object[]) {
+            Object[] values = (Object[]) queryValue;
+            return Arrays.stream(values)
+                    .map(OperatorStrategies::formatQueryValue)
+                    .collect(Collectors.joining(", "));
+        } else {
+            return formatQueryValue(queryValue);
         }
     }
 }
