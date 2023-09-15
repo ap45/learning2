@@ -1,3 +1,30 @@
+public String mapOperator(String operatorString) {
+    switch (operatorString) {
+        case "=":
+            return QueryOperation.EQUALS.getSqlOperator();
+        case "!=":
+            return QueryOperation.NOT_EQUALS.getSqlOperator();
+        case "contains":
+            return QueryOperation.LIKE.getSqlOperator();
+        case "does not contain":
+            return QueryOperation.NOT_LIKE.getSqlOperator();
+        case "between":
+            return QueryOperation.BETWEEN.getSqlOperator();
+        case "not between":
+            return QueryOperation.NOT_BETWEEN.getSqlOperator();
+        case "in":
+            return QueryOperation.IN.getSqlOperator();
+        case "not in":
+            return QueryOperation.NOT_IN.getSqlOperator();
+        case "empty":
+            return QueryOperation.IS_NULL.getSqlOperator();
+        case "is not empty":
+            return QueryOperation.IS_NOT_NULL.getSqlOperator();
+        default:
+            throw new IllegalArgumentException("Unsupported UI operation");
+    }
+}
+
 public StringBuilder getWhereClause() {
     List<String> fieldNames = workbenchRequest.getSearchCriterialist().stream()
             .map(cri -> cri.getQueryKey())
@@ -32,8 +59,11 @@ public StringBuilder getWhereClause() {
             if (values.length == 2) {
                 sql.append(" '").append(values[0]).append("' AND '").append(values[1]).append("'");
             }
-        } else if ("contains".equalsIgnoreCase(comparisonOperators.get(i)) ||
-                   "does not contain".equalsIgnoreCase(comparisonOperators.get(i))) {
+        } else if ("in".equalsIgnoreCase(comparisonOperators.get(i)) ||
+                "not in".equalsIgnoreCase(comparisonOperators.get(i))) {
+            sql.append(" (").append(queryValue).append(")");
+        } else if ("like".equalsIgnoreCase(comparisonOperators.get(i)) ||
+                "not like".equalsIgnoreCase(comparisonOperators.get(i))) {
             sql.append(" '%").append(queryValue).append("%'");
         } else if ("empty".equalsIgnoreCase(comparisonOperators.get(i))) {
             sql.append(" IS NULL");
