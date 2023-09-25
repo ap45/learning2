@@ -1,0 +1,84 @@
+@RestController
+@RequestMapping("/api/sourcelist")
+public class SourceListController {
+
+    @Autowired
+    private SourceListService sourceListService;
+
+    @PutMapping("/{id}")
+    public ResponseEntity<String> editSourceList(@PathVariable Long id, @RequestBody SourceListCreateData sourceListCreateData) {
+        try {
+            sourceListService.editSourceList(id, sourceListCreateData);
+            return ResponseEntity.ok("SourceListRef updated successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating SourceListRef: " + e.getMessage());
+        }
+    }
+}
+
+
+
+@Service
+public class SourceListService {
+
+    @Autowired
+    private SourceListRefRepository sourceListRefRepository;
+
+    @Autowired
+    private SourceListCategoryRepository categoryRepository;
+
+    @Autowired
+    private SourceListRegAuthRepository regAuthRepository;
+
+    @Autowired
+    private SourceListBusGrpRepository busGrpRepository;
+
+    @Transactional
+    public void editSourceList(Long id, SourceListCreateData sourceListCreateData) {
+        Optional<SourceListRef> optionalSourceListRef = sourceListRefRepository.findById(id);
+
+        if (optionalSourceListRef.isPresent()) {
+            SourceListRef sourceListRef = optionalSourceListRef.get();
+
+            // Update SourceListRef properties from SourceListCreateData
+            sourceListRef.setName(sourceListCreateData.getName());
+            sourceListRef.setDescription(sourceListCreateData.getDescription());
+            sourceListRef.setStatus(sourceListCreateData.getStatus());
+
+            // Set dynamically modifiedOn as java.sql.Date
+            java.sql.Date now = new java.sql.Date(new java.util.Date().getTime());
+            sourceListRef.setModifiedOn(now);
+
+            // Set category attributes if provided
+            if (sourceListCreateData.getCategoryId() != null) {
+                sourceListRef.setCategoryId(sourceListCreateData.getCategoryId());
+                SourceListCategory category = categoryRepository.findById(sourceListCreateData.getCategoryId()).orElse(null);
+                if (category != null) {
+                    sourceListRef.setCategoryName(category.getName());
+                }
+            }
+
+            // Set regAuth attributes if provided
+            if (sourceListCreateData.getRegAuthId() != null) {
+                sourceListRef.setRegAuthId(sourceListCreateData.getRegAuthId());
+                SourceListRegAuth regAuth = regAuthRepository.findById(sourceListCreateData.getRegAuthId()).orElse(null);
+                if (regAuth != null) {
+                    sourceListRef.setRegAuthName(regAuth.getName());
+                }
+            }
+
+            // Set busGrp attributes if provided
+            if (sourceListCreateData.getBusGrpId() != null) {
+                sourceListRef.setBusGrpId(sourceListCreateData.getBusGrpId());
+                SourceListBusGrp busGrp = busGrpRepository.findById(sourceListCreateData.getBusGrpId()).orElse(null);
+                if (busGrp != null) {
+                    sourceListRef.setBusGrpName(busGrp.getName());
+                }
+            }
+
+            sourceListRefRepository.save(sourceListRef);
+        } else {
+            throw new IllegalArgumentException("SourceListRef with ID " + id + " not found.");
+        }
+    }
+}
