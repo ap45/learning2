@@ -1,31 +1,21 @@
-DECLARE @TotalColumns INT;
-DECLARE @NotNullThreshold INT;
+DECLARE @Threshold FLOAT = 0.7;  -- Adjust the threshold as needed
+
 DECLARE @DynamicSQL NVARCHAR(MAX);
-
--- Set the threshold for considering a profile with most columns not null
-SET @NotNullThreshold = 0.7; -- Adjust as needed
-
--- Get the total number of columns in the profile table
-SELECT @TotalColumns = COUNT(*)
-FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME = 'profile'; -- Replace 'profile' with your actual table name
-
--- Construct the dynamic SQL query
 SET @DynamicSQL = '
 SELECT profile_id
 FROM profile
 WHERE (
-    (';
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ''profile'' AND TABLE_SCHEMA = ''dbo'') - 
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ''profile'' AND TABLE_SCHEMA = ''dbo'' AND ' + 
+    STUFF((SELECT ' + ' + ISNULL(' + COLUMN_NAME + ', 0) AS ' + COLUMN_NAME + ', '
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_NAME = 'profile' AND TABLE_SCHEMA = 'dbo'
+            FOR XML PATH('')), 1, 2, '') + ')) /
+    CAST((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ''profile'' AND TABLE_SCHEMA = ''dbo'') AS FLOAT)
+) > ' + CAST(@Threshold AS NVARCHAR(50));
 
--- Generate the condition for each column
-SELECT @DynamicSQL = @DynamicSQL + 
-                    'CASE WHEN [' + COLUMN_NAME + '] IS NOT NULL THEN 1 ELSE 0 END + '
-FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME = 'profile'; -- Replace 'profile' with your actual table name
-
--- Remove the trailing '+ ' and add the closing parentheses
-SET @DynamicSQL = LEFT(@DynamicSQL, LEN(@DynamicSQL) - 3) + ')
-) > (' + CAST(@NotNullThreshold * @TotalColumns AS NVARCHAR(10)) + ');';
+-- Print the dynamic SQL (for debugging purposes)
+-- PRINT @DynamicSQL;
 
 -- Execute the dynamic SQL query
 EXEC sp_executesql @DynamicSQL;
