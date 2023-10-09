@@ -2,27 +2,22 @@ DECLARE @Threshold FLOAT = 0.7;
 DECLARE @SQL NVARCHAR(MAX);
 DECLARE @ColumnsCount INT;
 
--- Get the total number of columns in the profile table
 SELECT @ColumnsCount = COUNT(*)
 FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME = 'profile';
+WHERE TABLE_NAME = 'RPM_PROFILE_T';
 
--- Construct the dynamic SQL query
 SET @SQL = '
-SELECT profile_id
-FROM profile
+SELECT PR_ID
+FROM RPM_PROFILE_T
 WHERE (
     (';
 
--- Generate the condition for each column
 SELECT @SQL = @SQL + 
                 'CASE WHEN [' + COLUMN_NAME + '] IS NOT NULL THEN 1 ELSE 0 END + '
 FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME = 'profile';
+WHERE TABLE_NAME = 'RPM_PROFILE_T';
 
--- Remove the trailing '+ ' and add the closing parentheses and threshold condition
 SET @SQL = LEFT(@SQL, LEN(@SQL) - 3) + ') > (' + CAST(@Threshold * @ColumnsCount AS NVARCHAR(10)) + ')
 )';
 
--- Execute the dynamic SQL query
-EXEC sp_executesql @SQL;
+EXEC(@SQL);
