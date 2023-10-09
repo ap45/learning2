@@ -1,4 +1,4 @@
-DECLARE @Threshold FLOAT = 0.7;  -- Adjust the threshold as needed
+DECLARE @Threshold FLOAT = 0.7;
 
 DECLARE @DynamicSQL NVARCHAR(MAX);
 SET @DynamicSQL = '
@@ -14,8 +14,4 @@ WHERE (
     CAST((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ''profile'' AND TABLE_SCHEMA = ''dbo'') AS FLOAT)
 ) > ' + CAST(@Threshold AS NVARCHAR(50));
 
--- Print the dynamic SQL (for debugging purposes)
--- PRINT @DynamicSQL;
-
--- Execute the dynamic SQL query
 EXEC sp_executesql @DynamicSQL;
