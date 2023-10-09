@@ -1,21 +1,33 @@
-DECLARE @Threshold FLOAT = 0.7;
-DECLARE @DynamicSQL NVARCHAR(MAX);
+CREATE PROCEDURE GetProfilesWithMostNotNullColumns
+    @Threshold FLOAT
+AS
+BEGIN
+    DECLARE @TotalColumns INT;
+    DECLARE @SQL NVARCHAR(MAX);
 
-SET @DynamicSQL = '
-SELECT profile_id
-FROM profile
-WHERE (
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ''profile'' AND TABLE_SCHEMA = ''dbo'') - 
-    (SELECT COUNT(*) 
-        FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = ''profile'' 
-        AND TABLE_SCHEMA = ''dbo'' 
-        AND ' + STUFF((SELECT ' + ISNULL(' + QUOTENAME(COLUMN_NAME) + ', 0) + ' AS ' + QUOTENAME(COLUMN_NAME)
-                        FROM INFORMATION_SCHEMA.COLUMNS 
-                        WHERE TABLE_NAME = ''profile'' 
-                        AND TABLE_SCHEMA = ''dbo'' 
-                        FOR XML PATH('')), 1, 1, '') + ')) /
-    CAST((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ''profile'' AND TABLE_SCHEMA = ''dbo'') AS FLOAT)
-) > ' + CAST(@Threshold AS NVARCHAR(50));
+    SET @SQL = N'
+    SELECT profile_id
+    FROM profile
+    WHERE (';
 
-EXEC sp_executesql @DynamicSQL;
+    -- Get the total number of columns in the profile table
+    SELECT @TotalColumns = COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_NAME = 'profile';
+
+    -- Generate the condition for each column
+    SELECT @SQL = @SQL + 
+                    'CASE WHEN [' + COLUMN_NAME + '] IS NOT NULL THEN 1 ELSE 0 END + '
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_NAME = 'profile';
+
+    -- Remove the trailing '+ ' and add the closing parentheses and threshold condition
+    SET @SQL = LEFT(@SQL, LEN(@SQL) - 3) + ') > (' + CAST(@Threshold * @TotalColumns AS NVARCHAR(10)) + ');';
+
+    -- Execute the dynamic SQL query
+    EXEC sp_executesql @SQL;
+END;
+GO
+
+-- Execute the stored procedure with your desired threshold (e.g., 0.7)
+EXEC GetProfilesWithMostNotNullColumns 0.7;
