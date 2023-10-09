@@ -1,33 +1,28 @@
-CREATE PROCEDURE GetProfilesWithMostNotNullColumns
-    @Threshold FLOAT
-AS
-BEGIN
-    DECLARE @TotalColumns INT;
-    DECLARE @SQL NVARCHAR(MAX);
+DECLARE @Threshold FLOAT = 0.7;
+DECLARE @SQL NVARCHAR(MAX);
+DECLARE @ColumnsCount INT;
 
-    SET @SQL = N'
-    SELECT profile_id
-    FROM profile
-    WHERE (';
+-- Get the total number of columns in the profile table
+SELECT @ColumnsCount = COUNT(*)
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'profile';
 
-    -- Get the total number of columns in the profile table
-    SELECT @TotalColumns = COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_NAME = 'profile';
+-- Construct the dynamic SQL query
+SET @SQL = '
+SELECT profile_id
+FROM profile
+WHERE (
+    (';
 
-    -- Generate the condition for each column
-    SELECT @SQL = @SQL + 
-                    'CASE WHEN [' + COLUMN_NAME + '] IS NOT NULL THEN 1 ELSE 0 END + '
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_NAME = 'profile';
+-- Generate the condition for each column
+SELECT @SQL = @SQL + 
+                'CASE WHEN [' + COLUMN_NAME + '] IS NOT NULL THEN 1 ELSE 0 END + '
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'profile';
 
-    -- Remove the trailing '+ ' and add the closing parentheses and threshold condition
-    SET @SQL = LEFT(@SQL, LEN(@SQL) - 3) + ') > (' + CAST(@Threshold * @TotalColumns AS NVARCHAR(10)) + ');';
+-- Remove the trailing '+ ' and add the closing parentheses and threshold condition
+SET @SQL = LEFT(@SQL, LEN(@SQL) - 3) + ') > (' + CAST(@Threshold * @ColumnsCount AS NVARCHAR(10)) + ')
+)';
 
-    -- Execute the dynamic SQL query
-    EXEC sp_executesql @SQL;
-END;
-GO
-
--- Execute the stored procedure with your desired threshold (e.g., 0.7)
-EXEC GetProfilesWithMostNotNullColumns 0.7;
+-- Execute the dynamic SQL query
+EXEC sp_executesql @SQL;
