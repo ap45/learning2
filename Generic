@@ -1,97 +1,11 @@
-public class ProfileSearchResultDTO {
-    private Profile profile;
-    private List<Interests> interests;
-    private List<Posts> posts;
-    private ContactInfo contactInfo;
+This year, my core contributions included working on the UI for both Profile Manager and Investigation Workbench, as well as developing the API for Profile Manager for search and sourcelist management. These contributions had a significant impact on the project. While the product I delivered was not the absolute best, it was considered good given the constraints of time. It addressed the essential needs and improved the workflow for users. Despite some outliers affecting performance, the team's prompt response in fixing issues ensured a better user experience. My achievements this year can be summarized as:
 
-    // Getters and setters
-}
+Designing and implementing the UI for Profile Manager and Investigation Workbench, enhancing the user experience and accessibility.
 
+Developing the API for Profile Manager, improving search and sourcelist management functionality, which streamlined data handling.
 
+Successfully delivering a product that met critical requirements within the given time frame, despite facing some performance challenges.
 
-@Component
-public class SearchMapping {
-    private final Map<String, Class<?>> columnToEntityMapping;
+Addressing issues promptly and working collaboratively to resolve outliers, ultimately enhancing the product's overall quality and usability.
 
-    public SearchMapping() {
-        // Initialize the mapping of searchable columns to entity classes
-        columnToEntityMapping = new HashMap<>();
-        columnToEntityMapping.put("name", Profile.class);
-        columnToEntityMapping.put("interestName", Interests.class);
-        columnToEntityMapping.put("postText", Posts.class);
-        columnToEntityMapping.put("email", ContactInfo.class);
-        columnToEntityMapping.put("phone", ContactInfo.class);
-        // Add more columns and entities as needed
-    }
-
-    public Class<?> getEntityClass(String columnName) {
-        return columnToEntityMapping.get(columnName);
-    }
-}
-
-
-//////
-@Service
-public class SearchService {
-    @Autowired
-    private EntityManager entityManager;
-
-    @Autowired
-    private SearchMapping searchMapping;
-
-    public List<ProfileSearchResultDTO> search(String searchColumn, String searchValue) {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<ProfileSearchResultDTO> query = cb.createQuery(ProfileSearchResultDTO.class);
-
-        Root<Profile> profileRoot = query.from(Profile.class);
-
-        Class<?> entityClass = searchMapping.getEntityClass(searchColumn);
-
-        if (entityClass != null) {
-            Join<Profile, Object> join = profileRoot.join(searchColumn, JoinType.LEFT);
-
-            Predicate searchPredicate = cb.like(join.get(searchColumn), "%" + searchValue + "%");
-
-            query.where(searchPredicate);
-            query.select(profileRoot);
-
-            TypedQuery<ProfileSearchResultDTO> typedQuery = entityManager.createQuery(query);
-            List<ProfileSearchResultDTO> searchResults = typedQuery.getResultList();
-
-            return searchResults;
-        } else {
-            return Collections.emptyList();
-        }
-    }
-}
-
-
-
-
-///
-
-
-package com.yourcompany.controller;
-
-import com.yourcompany.search.SearchService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-@RestController
-@RequestMapping("/api")
-public class SearchController {
-    @Autowired
-    private SearchService searchService;
-
-    @GetMapping("/search")
-    public ResponseEntity<Object> search(
-            @RequestParam String columnName,
-            @RequestParam String searchValue) {
-        Object searchResults = searchService.search(columnName, searchValue);
-        return ResponseEntity.ok(searchResults);
-    }
-}
+My contributions have positively impacted the project by making it more user-friendly and efficient, even though there were challenges along the way.
