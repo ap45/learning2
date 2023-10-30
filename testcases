@@ -1,0 +1,102 @@
+import org.junit.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.springframework.boot.test.context.SpringBootTest;
+import java.util.Collections;
+import java.util.List;
+import static org.junit.Assert.assertEquals;
+
+@SpringBootTest
+public class WorkbenchServiceTest {
+
+    @InjectMocks
+    private SearchResultWorkbenchService searchResultWorkbenchService;
+
+    @Mock
+    private WorkbenchDao<SearchResult> workbenchDao;
+
+    @Test
+    public void testGetWorkbenchDataForSearchResultGrid() {
+        // Prepare a sample request
+        WorkbenchRequest workbenchRequest = new WorkbenchRequest();
+        workbenchRequest.setGridID("PROFILE_SEARCH_GRID");
+        workbenchRequest.setSearchCriteriaList(Collections.singletonList(
+                new SearchCriteria("profileID", "=", "1000204546")
+        ));
+        workbenchRequest.setSortColumn("");
+        workbenchRequest.setSortDirection("");
+        workbenchRequest.setPageSize(50);
+        workbenchRequest.setPageNo(1);
+
+        // Prepare mock data for the DAO response
+        List<SearchResult> expectedResults = Collections.singletonList(new SearchResult());
+        Mockito.when(workbenchDao.getWorkbenchData("PROFILE_SEARCH_GRID", "SQL_QUERY_HERE", Collections.emptyList()))
+                .thenReturn(expectedResults);
+
+        // Invoke the service
+        WorkbenchResponse<SearchResult> result = searchResultWorkbenchService.getWorkbenchData(workbenchRequest);
+
+        // Assert the result
+        assertEquals(expectedResults, result.getResult());
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import java.util.Collections;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class WorkbenchControllerTest {
+
+    private MockMvc mockMvc;
+
+    @InjectMocks
+    private WorkbenchController workbenchController;
+
+    @Mock
+    private WorkbenchServiceFactory workbenchServiceFactory;
+
+    @Before
+    public void setup() {
+        mockMvc = MockMvcBuilders.standaloneSetup(workbenchController).build();
+    }
+
+    @Test
+    public void testGetWorkbenchDataForSearchResultGrid() throws Exception {
+        // Prepare a sample request
+        WorkbenchRequest workbenchRequest = new WorkbenchRequest();
+        workbenchRequest.setGridID("PROFILE_SEARCH_GRID");
+        workbenchRequest.setSearchCriteriaList(Collections.singletonList(
+                new SearchCriteria("profileID", "=", "1000204546")
+        ));
+        workbenchRequest.setSortColumn("");
+        workbenchRequest.setSortDirection("");
+        workbenchRequest.setPageSize(50);
+        workbenchRequest.setPageNo(1);
+
+        // Mock the behavior of the WorkbenchServiceFactory
+        Mockito.when(workbenchServiceFactory.getService(SearchResult.class))
+                .thenReturn(new SearchResultWorkbenchService());
+
+        mockMvc.perform(post("/pm-ui-api/workbench")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(new ObjectMapper().writeValueAsString(workbenchRequest)))
+                .andExpect(status().isOk());
+    }
+}
+
