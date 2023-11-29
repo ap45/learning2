@@ -1,61 +1,64 @@
-import org.apache.poi.ss.usermodel.*;
-import org.springframework.stereotype.Component;
-import org.springframework.web.multipart.MultipartFile;
+// ExcelConverterUtil.java
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.springframework.util.Base64Utils;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
-@Component
-public class ExcelConverter {
+public class ExcelConverterUtil {
 
-    public byte[] excelToBytes(Workbook workbook) throws IOException {
+    public static String excelToBase64(InputStream excelInputStream) throws IOException {
+        Workbook workbook = WorkbookFactory.create(excelInputStream);
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         workbook.write(outputStream);
-        return outputStream.toByteArray();
+        return Base64Utils.encodeToString(outputStream.toByteArray());
     }
 
-    public String excelToBase64(Workbook workbook) throws IOException {
-        byte[] bytes = excelToBytes(workbook);
-        return java.util.Base64.getEncoder().encodeToString(bytes);
-    }
-
-    public Workbook bytesToExcel(byte[] bytes) throws IOException {
-        Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(bytes));
-        return workbook;
-    }
-
-    public Workbook base64ToExcel(String base64) throws IOException {
-        byte[] bytes = java.util.Base64.getDecoder().decode(base64);
-        return bytesToExcel(bytes);
-    }
-
-    public Workbook multipartFileToExcel(MultipartFile file) throws IOException {
-        Workbook workbook = WorkbookFactory.create(file.getInputStream());
-        return workbook;
+    public static Workbook base64ToExcel(String base64String) throws IOException {
+        byte[] decodedBytes = Base64Utils.decodeFromString(base64String);
+        return WorkbookFactory.create(new ByteArrayInputStream(decodedBytes));
     }
 }
 
-/////////////////////////////
+
+//////////////////////////
+// ExcelController.java
 import org.apache.poi.ss.usermodel.Workbook;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 @RestController
-@RequestMapping("/excel")
 public class ExcelController {
 
-    @Autowired
-    private ExcelConverter excelConverter;
-
-    @PostMapping("/convert-to-base64")
-    public String convertToBase64(@RequestParam("file") MultipartFile file) throws IOException {
-        Workbook workbook = excelConverter.multipartFileToExcel(file);
-        return excelConverter.excelToBase64(workbook);
+    @PostMapping("/excel-to-base64")
+    public ResponseEntity<String> excelToBase64(@RequestBody InputStream excelInputStream) throws IOException {
+        String base64String = ExcelConverterUtil.excelToBase64(excelInputStream);
+        return ResponseEntity.ok(base64String);
     }
 
-    @PostMapping("/convert-to-excel")
-    public Workbook convertToExcel(@RequestBody String base64) throws IOException {
-        return excelConverter.base64ToExcel(base64);
+    @PostMapping("/base64-to-excel")
+    public ResponseEntity<byte[]> base64ToExcel(@RequestBody String base64String) throws IOException {
+        Workbook workbook = ExcelConverterUtil.base64ToExcel(base64String);
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        workbook.write(outputStream);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=downloaded_excel.xlsx");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(outputStream.toByteArray());
     }
 }
