@@ -1,0 +1,61 @@
+import org.apache.poi.ss.usermodel.*;
+import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+
+@Component
+public class ExcelConverter {
+
+    public byte[] excelToBytes(Workbook workbook) throws IOException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        workbook.write(outputStream);
+        return outputStream.toByteArray();
+    }
+
+    public String excelToBase64(Workbook workbook) throws IOException {
+        byte[] bytes = excelToBytes(workbook);
+        return java.util.Base64.getEncoder().encodeToString(bytes);
+    }
+
+    public Workbook bytesToExcel(byte[] bytes) throws IOException {
+        Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(bytes));
+        return workbook;
+    }
+
+    public Workbook base64ToExcel(String base64) throws IOException {
+        byte[] bytes = java.util.Base64.getDecoder().decode(base64);
+        return bytesToExcel(bytes);
+    }
+
+    public Workbook multipartFileToExcel(MultipartFile file) throws IOException {
+        Workbook workbook = WorkbookFactory.create(file.getInputStream());
+        return workbook;
+    }
+}
+
+/////////////////////////////
+import org.apache.poi.ss.usermodel.Workbook;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+@RestController
+@RequestMapping("/excel")
+public class ExcelController {
+
+    @Autowired
+    private ExcelConverter excelConverter;
+
+    @PostMapping("/convert-to-base64")
+    public String convertToBase64(@RequestParam("file") MultipartFile file) throws IOException {
+        Workbook workbook = excelConverter.multipartFileToExcel(file);
+        return excelConverter.excelToBase64(workbook);
+    }
+
+    @PostMapping("/convert-to-excel")
+    public Workbook convertToExcel(@RequestBody String base64) throws IOException {
+        return excelConverter.base64ToExcel(base64);
+    }
+}
