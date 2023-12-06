@@ -1,64 +1,86 @@
-// ExcelConverterUtil.java
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
-import org.springframework.util.Base64Utils;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.stereotype.Service;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
-public class ExcelConverterUtil {
+@Service
+public class ExcelService {
 
-    public static String excelToBase64(InputStream excelInputStream) throws IOException {
-        Workbook workbook = WorkbookFactory.create(excelInputStream);
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        workbook.write(outputStream);
-        return Base64Utils.encodeToString(outputStream.toByteArray());
-    }
+    private static final List<String> FIELD_NAMES = Arrays.asList(
+            "firstName", "lastName", "sourceListName", "nationalities", "status",
+            "complianceUnit", "domicile", "creationDate", "updatedDate", "profileID",
+            "ownershipCountry", "ownershipDivision", "dob", "onboardingCategory", "totalRowCount", "notes"
+    );
 
-    public static Workbook base64ToExcel(String base64String) throws IOException {
-        byte[] decodedBytes = Base64Utils.decodeFromString(base64String);
-        return WorkbookFactory.create(new ByteArrayInputStream(decodedBytes));
+    public String generateExcel(List<Map<String, Object>> data) throws IOException {
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Sheet1");
+
+        try {
+            // Create header row
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < FIELD_NAMES.size(); i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(FIELD_NAMES.get(i));
+            }
+
+            // Populate data rows
+            for (int rowIndex = 0; rowIndex < data.size(); rowIndex++) {
+                Row dataRow = sheet.createRow(rowIndex + 1);
+                Map<String, Object> rowData = data.get(rowIndex);
+
+                int cellIndex = 0;
+                for (String fieldName : FIELD_NAMES) {
+                    Cell cell = dataRow.createCell(cellIndex++);
+                    Object value = rowData.get(fieldName);
+                    if (value != null) {
+                        cell.setCellValue(value.toString());
+                    }
+                }
+            }
+
+            // Convert workbook to byte array
+            try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+                workbook.write(outputStream);
+                return java.util.Base64.getEncoder().encodeToString(outputStream.toByteArray());
+            }
+        } finally {
+            // Close workbook resources
+            workbook.close();
+        }
     }
 }
 
 
-//////////////////////////
-// ExcelController.java
-import org.apache.poi.ss.usermodel.Workbook;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 public class ExcelController {
 
-    @PostMapping("/excel-to-base64")
-    public ResponseEntity<String> excelToBase64(@RequestBody InputStream excelInputStream) throws IOException {
-        String base64String = ExcelConverterUtil.excelToBase64(excelInputStream);
-        return ResponseEntity.ok(base64String);
-    }
+    @Autowired
+    private ExcelService excelService;
 
-    @PostMapping("/base64-to-excel")
-    public ResponseEntity<byte[]> base64ToExcel(@RequestBody String base64String) throws IOException {
-        Workbook workbook = ExcelConverterUtil.base64ToExcel(base64String);
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        workbook.write(outputStream);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=downloaded_excel.xlsx");
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(outputStream.toByteArray());
+    @PostMapping("/generate-excel")
+    public String generateExcel(@RequestBody List<Map<String, Object>> data) {
+        try {
+            return excelService.generateExcel(data);
+        } catch (IOException e) {
+            e.printStackTrace(); // Log or handle the exception as needed
+            return "Error generating Excel file";
+        }
     }
 }
