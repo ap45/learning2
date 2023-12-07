@@ -35,3 +35,54 @@ public class ThirdPartyApiProxyController {
         return response;
     }
 }
+
+
+////////////////////////////////////////////////////////////// new approache /////////////////////////////////////////////////////
+
+// ThirdPartyApiProxyController.java
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api")
+public class ThirdPartyApiProxyController {
+
+    @Value("${thirdparty.api.url}")
+    private String thirdPartyApiUrl;
+
+    private final RestTemplate restTemplate;
+
+    public ThirdPartyApiProxyController(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
+    @PostMapping("/proxy-to-third-party-api")
+    public ResponseEntity<Map<String, Object>> proxyToThirdPartyApi(@RequestBody Map<String, Object> payload) {
+        // Use the third-party API URL from properties
+        // Make sure thirdparty.api.url is defined in your application.properties file
+        // For example: thirdparty.api.url=https://example.com/third-party-api
+
+        // Set headers if needed
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Content-Type", "application/json");
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(payload, headers);
+
+        // Forward the payload to the third-party API
+        ResponseEntity<Map<String, Object>> response =
+                restTemplate.exchange(thirdPartyApiUrl, HttpMethod.POST, requestEntity, Map.class);
+
+        // You can add additional logic here based on the third-party API response if needed
+
+        return response;
+    }
+}
