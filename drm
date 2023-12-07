@@ -1,0 +1,37 @@
+// YourPayloadClass.java
+public class YourPayloadClass {
+    // Define the fields of your payload class based on the data you need to send to the third-party API
+}
+
+// ThirdPartyApiResponse.java
+public class ThirdPartyApiResponse {
+    // Define the fields of your response class based on the data returned by the third-party API
+}
+
+// ThirdPartyApiProxyController.java
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
+
+@RestController
+public class ThirdPartyApiProxyController {
+
+    @Value("${thirdparty.api.url}")
+    private String thirdPartyApiUrl;
+
+    @PostMapping("/proxy-to-third-party-api")
+    public ResponseEntity<ThirdPartyApiResponse> proxyToThirdPartyApi(@RequestBody YourPayloadClass payload) {
+        RestTemplate restTemplate = new RestTemplate();
+
+        // Forward the payload to the third-party API
+        ResponseEntity<ThirdPartyApiResponse> response =
+                restTemplate.postForEntity(thirdPartyApiUrl, payload, ThirdPartyApiResponse.class);
+
+        // You can add additional logic here based on the third-party API response if needed
+
+        return response;
+    }
+}
