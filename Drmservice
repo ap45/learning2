@@ -26,3 +26,22 @@ public class DrmUserLogService {
         drmUserLogRepository.save(logEntity);
     }
 }
+
+
+// UserDetailPayload.java
+public class UserDetailPayload {
+
+    private String profileId;
+
+    private String gpin;
+
+    private String documentLabel;
+
+    private String gridid;
+
+    private Integer totalElements;
+
+    private String email;
+
+    // Constructors, getters, and setters
+}
