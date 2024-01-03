@@ -1,175 +1,141 @@
-@RunWith(SpringRunner.class)
-@SpringBootTest
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import java.util.Collections;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@RunWith(MockitoJUnitRunner.class)
+@WebMvcTest(WorkbenchController.class)
 public class WorkbenchControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
-    private WorkbenchServiceFactory workbenchServiceFactory;
+    @Mock
+    private WorkbenchService workbenchService;
 
-    @Autowired
+    @InjectMocks
     private WorkbenchController workbenchController;
 
     @Test
-    public void testGetWorkbenchData_Success() throws Exception {
-        // Mocking the service response
-        WorkbenchResponse<?> mockResponse = createMockResponse();
-        when(workbenchServiceFactory.getService(any())).thenReturn(createMockService(mockResponse));
-
+    public void testSearchProfiles() throws Exception {
         // Sample request
-        String sampleRequest = "{\"gridId\":\"PROFILE_SEARCH_GRID\",\"searchcriteriaList\":[{\"queryKey\":\"profileID\",\"queryopeator\":\"=\",\"queryValue\":\"100229\"}],\"sortColumn\":\"\",\"sortDirection\":\"\",\"pageSize\":\"50\",\"pageNo\":1}";
+        String request = "{ \"gridId\": \"PROFILE_SEARCH_GRID\", \"searchcriteriaList\": [{ \"queryKey\": \"profileID\", \"queryopeator\": \"=\", \"queryValue\": \"10629\" }], \"sortColumn\": \"\", \"sortDirection\": \"\", \"pageSize\": \"50\", \"pageNo\": 1 }";
 
-        // Performing the request
-        mockMvc.perform(post("/pm-ui-api/workbench")
+        // Sample response
+        String response = "{ \"data\": [{ \"firstName\": \"Muhed Kriz\", \"lastName\": \"Khalid\", \"sourceListName\": \" }
+        when(workbenchService.searchProfiles(any())).thenReturn(response);
+
+        mockMvc.perform(post("/searchProfiles")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(sampleRequest))
+                .content(request))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].firstName", is("Med Kz")))
-                .andExpect(jsonPath("$.totalElements", is(1)))
-                .andExpect(jsonPath("$.totalPages", is(1)));
-    }
-
-    // Other test cases for error handling, invalid input, etc.
-
-    private WorkbenchService createMockService(WorkbenchResponse<?> mockResponse) {
-        WorkbenchService workbenchService = mock(WorkbenchService.class);
-        when(workbenchService.getWorkbenchData(any())).thenReturn(mockResponse);
-        return workbenchService;
-    }
-
-    private WorkbenchResponse<?> createMockResponse() {
-        // Construct and return a mock response based on the sample response
-        // You may need to adjust this based on the actual structure of your response
-        return new WorkbenchResponse<>(Collections.singletonList(
-                new HashMap<String, Object>() {{
-                    put("firstName", "Mud Khz");
-                    put("lastName", "Kh");
-                    // Add other fields as needed
-                }}
-        ), 1, 1);
+                .andExpect(jsonPath("$.data[0].firstName").value("Muhammed Khairiz"));
     }
 }
 
 
-//////////// service /////
+
+//////service //////
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
 @RunWith(MockitoJUnitRunner.class)
 public class WorkbenchServiceTest {
 
     @Mock
-    private WorkbenchRepository repository;
+    private WorkbenchRepository workbenchRepository;
 
     @InjectMocks
     private WorkbenchServiceImpl workbenchService;
 
     @Test
-    public void testGetWorkbenchData_Success() {
-        // Mocking the repository data
-        when(repository.getWorkbenchData(any())).thenReturn(createMockResponse());
+    public void testSearchProfiles() {
+        // Sample request
+        WorkbenchSearchRequest request = new WorkbenchSearchRequest();
+        request.setGridId("PROFILE_SEARCH_GRID");
+        request.setSearchcriteriaList(Collections.singletonList(new SearchCriteria("profileID", "=", "1002843629")));
+        request.setSortColumn("");
+        request.setSortDirection("");
+        request.setPageSize("50");
+        request.setPageNo(1);
 
-        // Test the service method
-        WorkbenchResponse<?> result = workbenchService.getWorkbenchData(createSampleRequest());
+        // Sample response
+        String response = "{ \"data\": [{ \"firstName\": \"Muhd Khz\", \"lastName\": \"Kid\", \"sourceListName\": \"", \"nationalities\": null, \"status\": \"Active\", \"complianceUnit\": null,\"domicile\": null, \"creationDate\": \"2023-09-20\", \"updatedDate\": null, \"profileID\": 100629, \"ownershipCountry\": null, \"ownershipDivision\": null, \"dob\": \"1976,1977\", \"onboardingCategory\": null, \"totalRowCount\": 1, \"notes\": null }], \"totalElements\": 1, \"totalPages\": 1 }";
 
-        // Assertions
+        when(workbenchRepository.searchProfiles(any())).thenReturn(response);
+
+        String result = workbenchService.searchProfiles(request);
+
         assertNotNull(result);
-        assertEquals(1, result.getTotalElements());
-        assertEquals(1, result.getTotalPages());
-        assertNotNull(result.getData());
-        assertEquals("Muhammed Khairiz", result.getData().get(0).get("firstName"));
-        // Add more assertions based on the expected response
-    }
-
-    // Other test cases for error scenarios, edge cases, etc.
-
-    private Map<String, Object> createSampleRequest() {
-        // Construct and return a sample request based on your example
-        // You may need to adjust this based on the actual structure of your request
-        return new HashMap<String, Object>() {{
-            put("gridId", "PROFILE_SEARCH_GRID");
-            put("searchcriteriaList", Collections.singletonList(
-                    new HashMap<String, Object>() {{
-                        put("queryKey", "profileID");
-                        put("queryopeator", "=");
-                        put("queryValue", "10629");
-                    }}
-            ));
-            put("sortColumn", "");
-            put("sortDirection", "");
-            put("pageSize", "50");
-            put("pageNo", 1);
-        }};
-    }
-
-    private WorkbenchResponse<?> createMockResponse() {
-        // Construct and return a mock response based on the sample response
-        // You may need to adjust this based on the actual structure of your response
-        return new WorkbenchResponse<>(Collections.singletonList(
-                new HashMap<String, Object>() {{
-                    put("firstName", "Muhd Kiz");
-                    put("lastName", "Khid");
-                    // Add other fields as needed
-                }}
-        ), 1, 1);
+        assertEquals(response, result);
     }
 }
 
-///////// service impl /////
+
+
+////ssrvice impl ////
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
 @RunWith(MockitoJUnitRunner.class)
 public class WorkbenchServiceImplTest {
 
     @Mock
-    private WorkbenchRepository repository;
+    private WorkbenchRepository workbenchRepository;
 
     @InjectMocks
     private WorkbenchServiceImpl workbenchService;
 
     @Test
-    public void testGetWorkbenchData_Success() {
-        // Mocking the repository data
-        when(repository.fetchWorkbenchData(any())).thenReturn(createMockResponse());
+    public void testSearchProfiles() {
+        // Sample request
+        WorkbenchSearchRequest request = new WorkbenchSearchRequest();
+        request.setGridId("PROFILE_SEARCH_GRID");
+        request.setSearchcriteriaList(Collections.singletonList(new SearchCriteria("profileID", "=", "1002843629")));
+        request.setSortColumn("");
+        request.setSortDirection("");
+        request.setPageSize("50");
+        request.setPageNo(1);
 
-        // Test the service method
-        WorkbenchResponse<?> result = workbenchService.getWorkbenchData(createSampleRequest());
+        // Sample response
+        
+        when(workbenchRepository.searchProfiles(any())).thenReturn(response);
 
-        // Assertions
+        String result = workbenchService.searchProfiles(request);
+
         assertNotNull(result);
-        assertEquals(1, result.getTotalElements());
-        assertEquals(1, result.getTotalPages());
-        assertNotNull(result.getData());
-        assertEquals("Muhed Khz", result.getData().get(0).get("firstName"));
-        // Add more assertions based on the expected response
-    }
-
-    // Other test cases for error scenarios, edge cases, etc.
-
-    private Map<String, Object> createSampleRequest() {
-        // Construct and return a sample request based on your example
-        // You may need to adjust this based on the actual structure of your request
-        return new HashMap<String, Object>() {{
-            put("gridId", "PROFILE_SEARCH_GRID");
-            put("searchcriteriaList", Collections.singletonList(
-                    new HashMap<String, Object>() {{
-                        put("queryKey", "profileID");
-                        put("queryopeator", "=");
-                        put("queryValue", "10029");
-                    }}
-            ));
-            put("sortColumn", "");
-            put("sortDirection", "");
-            put("pageSize", "50");
-            put("pageNo", 1);
-        }};
-    }
-
-    private WorkbenchResponse<?> createMockResponse() {
-        // Construct and return a mock response based on the sample response
-        // You may need to adjust this based on the actual structure of your response
-        return new WorkbenchResponse<>(Collections.singletonList(
-                new HashMap<String, Object>() {{
-                    put("firstName", "Mumed Kriz");
-                    put("lastName", "Kid");
-                    // Add other fields as needed
-                }}
-        ), 1, 1);
+        assertEquals(response, result);
     }
 }
+
