@@ -38,7 +38,7 @@ public class WorkbenchControllerTest {
 
     private WorkbenchResponse<SearchResult> createSampleResponse() {
         SearchResult result = new SearchResult();
-        result.setFirstName("Muhammed Khairiz");
+        result.setFirstName("M Kh");
         // Set other fields...
         
         List<SearchResult> dataList = Collections.singletonList(result);
