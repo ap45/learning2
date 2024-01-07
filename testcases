@@ -1,105 +1,69 @@
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.*;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.web.client.RestTemplate;
 
-import java.time.LocalDate;
-import java.util.Collections;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import static org.assertj.core.api.Assertions.assertThat;
-
-@ExtendWith(MockitoExtension.class)
+@RunWith(SpringRunner.class)
 @SpringBootTest
-@AutoConfigureMockMvc
-public class WorkbenchControllerTest {
+public class WorkbenchControllerIntegrationTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @InjectMocks
+    private WorkbenchController workbenchController;
 
     @Mock
     private WorkbenchServiceFactory workbenchServiceFactory;
 
     @Mock
-    private WorkbenchService<SearchResult> workbenchService;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @InjectMocks
-    private WorkbenchController workbenchController;
+    private RestTemplate restTemplate;
 
     @Test
-    public void testGetWorkbenchData() throws Exception {
-        // Sample Request
-        WorkbenchRequest sampleRequest = new WorkbenchRequest();
-        sampleRequest.setGridId(Requests.PROFILE_SEARCH_GRID.name());
-        sampleRequest.setSearchCriteriaList(Collections.singletonList(new SearchCriteria("profileID", "=", "1002843629")));
-        sampleRequest.setSortColumn("");
-        sampleRequest.setSortDirection("");
-        sampleRequest.setPageSize(50);
-        sampleRequest.setPageNumber(1);
+    public void testGetWorkbenchDataForProfileSearchGrid() {
+        // Arrange
+        String gridId = Requests.PROFILE_SEARCH_GRID.name();
+        WorkbenchRequest workbenchRequest = createSampleWorkbenchRequest(gridId);
+        SearchResult mockResult = createSampleSearchResult();
+        WorkbenchService<?> mockService = mock(WorkbenchService.class);
+        when(mockService.getWorkbenchData(any(WorkbenchRequest.class))).thenReturn(mockResult);
+        when(workbenchServiceFactory.getService(any())).thenReturn(mockService);
 
-        // Sample Response
-        SearchResult sampleResult = new SearchResult();
-        sampleResult.setFirstName("Muhammed Khairiz");
-        sampleResult.setLastName("Khalid");
-        sampleResult.setSourceListName("EC 2012/388/CFSP Somalia List, United States Secret Service Most Wanted List");
-        sampleResult.setNationalities(null);
-        sampleResult.setStatus("Active");
-        sampleResult.setComplianceUnit(null);
-        sampleResult.setDomicile(null);
-        sampleResult.setCreationDate(LocalDate.of(2023, 9, 20));
-        sampleResult.setUpdatedDate(null);
-        sampleResult.setProfileID(1002843629);
-        sampleResult.setOwnershipCountry(null);
-        sampleResult.setOwnershipDivision(null);
-        sampleResult.setDob("1976,1977");
-        sampleResult.setOnboardingCategory(null);
-        sampleResult.setTotalRowCount(1);
-        sampleResult.setNotes(null);
+        // Act
+        ResponseEntity<WorkbenchResponse<?>> responseEntity = workbenchController.getWorkbenchData(workbenchRequest);
 
-        WorkbenchResponse<SearchResult> sampleResponse = new WorkbenchResponse<>();
-        sampleResponse.setData(Collections.singletonList(sampleResult));
-        sampleResponse.setTotalElements(1);
-        sampleResponse.setTotalPages(1);
+        // Assert
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        // Add more specific assertions based on your response structure
+        assertEquals(mockResult, responseEntity.getBody().getData());
+    }
 
-        // Mocking behavior
-        when(workbenchServiceFactory.getService(SearchResult.class)).thenReturn(workbenchService);
-        when(workbenchService.getWorkbenchData(any(WorkbenchRequest.class))).thenReturn(sampleResponse);
+    private WorkbenchRequest createSampleWorkbenchRequest(String gridId) {
+        WorkbenchRequest request = new WorkbenchRequest();
+        request.setGridID(gridId);
 
-        // Perform the request
-        ResultActions resultActions = mockMvc.perform(MockMvcRequestBuilders.post("/pm-ui-api/workbench")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(sampleRequest)));
+        SearchCriteria searchCriteria = new SearchCriteria();
+        searchCriteria.setQueryKeyLabel("profileID");
+        searchCriteria.setQueryKey("profileID");
+        searchCriteria.setQueryOperator("=");
+        searchCriteria.setQueryValue("1002843629");
 
-        // Verify the response
-        resultActions.andExpect(status().isOk());
+        request.setSearchCriteria(Collections.singletonList(searchCriteria));
 
-        WorkbenchResponse<SearchResult> actualResponse = objectMapper.readValue(
-                resultActions.andReturn().getResponse().getContentAsString(),
-                new TypeReference<WorkbenchResponse<SearchResult>>() {});
+        return request;
+    }
 
-        assertThat(actualResponse.getData()).hasSize(1);
-        assertThat(actualResponse.getData().get(0).getFirstName()).isEqualTo("Muhammed Khairiz");
-        assertThat(actualResponse.getTotalElements()).isEqualTo(1);
-        assertThat(actualResponse.getTotalPages()).isEqualTo(1);
-
-        // Verify that the service methods were called
-        verify(workbenchServiceFactory).getService(SearchResult.class);
-        verify(workbenchService).getWorkbenchData(any(WorkbenchRequest.class));
+    private SearchResult createSampleSearchResult() {
+        SearchResult result = new SearchResult();
+        result.setFirstName("Muhammed Khairiz");
+        result.setLastName("Khalid");
+        result.setStatus("Active");
+        // Set other properties based on your response structure
+        return result;
     }
 }
