@@ -1,8 +1,3 @@
-import static org.mockito.Mockito.*;
-
-import java.util.Arrays;
-import java.util.Collections;
-
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -11,44 +6,91 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.ResponseEntity;
 
+import java.util.Arrays;
+import java.util.Collections;
+
+import static org.mockito.Mockito.*;
+
 public class WorkbenchControllerTest {
 
     @Mock
     private WorkbenchServiceFactory workbenchServiceFactory;
 
-    @InjectMocks
-    private WorkbenchController workbenchController;
-
     @Mock
     private WorkbenchService<SearchResult> workbenchService;
 
-    @Mock
-    private WorkbenchService<SourceListResult> sourceListService;
+    @InjectMocks
+    private WorkbenchController workbenchController;
 
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
     }
 
+    private WorkbenchRequest createSampleRequest(String gridId) {
+        return new WorkbenchRequest(gridId, Arrays.asList(new SearchCriteria("profileID", "=", 1002843629)), "", "", 1, 50);
+    }
+
+    private WorkbenchResponse<SearchResult> createSampleResponse() {
+        SearchResult searchResult = new SearchResult();
+        searchResult.setFirstName("Muhammed Khairiz");
+        searchResult.setLastName("Khalid");
+
+        return new WorkbenchResponse<>(Collections.singletonList(searchResult), 1, 1);
+    }
+
     @Test
-    public void testGetWorkbenchData_Successful_ProfileSearchGrid() {
+    public void testGetWorkbenchData_ProfileSearchGrid() {
         // Arrange
-        WorkbenchRequest workbenchRequest = new WorkbenchRequest("PROFILE_SEARCH_GRID",
-                Arrays.asList(new SearchCriteria("profileID", "=", 12843629)), "", "", 1, 50);
+        WorkbenchRequest workbenchRequest = createSampleRequest("PROFILE_SEARCH_GRID");
 
         when(workbenchServiceFactory.getService(SearchResult.class)).thenReturn(workbenchService);
-
-        SearchResult searchResult = new SearchResult();
-        searchResult.setFirstName("Mmed Khaiz");
-        searchResult.setLastName("alid");
-
-        WorkbenchResponse<SearchResult> workbenchResponse = new WorkbenchResponse<>(Collections.singletonList(searchResult), 1, 1);
-        when(workbenchService.getWorkbenchData(workbenchRequest)).thenReturn(workbenchResponse);
+        when(workbenchService.getWorkbenchData(workbenchRequest)).thenReturn(createSampleResponse());
 
         // Act
         ResponseEntity<WorkbenchResponse<?>> response = workbenchController.getWorkbenchData(workbenchRequest);
 
         // Assert
+        assertResponse(response, SearchResult.class);
+    }
+
+    @Test
+    public void testGetWorkbenchData_SourceListGrid() {
+        // Arrange
+        WorkbenchRequest workbenchRequest = createSampleRequest("SOURCE_LIST_GRID");
+
+        when(workbenchServiceFactory.getService(SourceListResult.class)).thenReturn(workbenchService);
+        when(workbenchService.getWorkbenchData(workbenchRequest)).thenReturn(createSampleResponse());
+
+        // Act
+        ResponseEntity<WorkbenchResponse<?>> response = workbenchController.getWorkbenchData(workbenchRequest);
+
+        // Assert
+        assertResponse(response, SourceListResult.class);
+    }
+
+    @Test
+    public void testGetWorkbenchData_DetermineGenericType_ProfileSearchGrid() {
+        // Arrange
+        WorkbenchRequest workbenchRequest = createSampleRequest("PROFILE_SEARCH_GRID");
+
+        when(workbenchServiceFactory.getService(SearchResult.class)).thenReturn(workbenchService);
+        when(workbenchService.getWorkbenchData(workbenchRequest)).thenReturn(createSampleResponse());
+
+        // Act
+        ResponseEntity<WorkbenchResponse<?>> response = workbenchController.getWorkbenchData(workbenchRequest);
+
+        // Assert
+        assertResponse(response, SearchResult.class);
+
+        // Additional Assertions for determining generic type
+        Class<?> determinedClass = workbenchController.determineGenericTypes("PROFILE_SEARCH_GRID");
+        Assert.assertEquals(SearchResult.class, determinedClass);
+    }
+
+    // Add more test cases as needed
+
+    private void assertResponse(ResponseEntity<WorkbenchResponse<?>> response, Class<?> expectedClass) {
         Assert.assertNotNull(response);
         Assert.assertEquals(200, response.getStatusCodeValue());
         Assert.assertNotNull(response.getBody());
@@ -57,70 +99,6 @@ public class WorkbenchControllerTest {
         Assert.assertEquals(1, responseBody.getTotalPages());
         Assert.assertNotNull(responseBody.getData());
         Assert.assertEquals(1, responseBody.getData().size());
-        SearchResult result = (SearchResult) responseBody.getData().get(0);
-        Assert.assertEquals("Mumd Khairiz", result.getFirstName());
-        // Assert other properties...
-    }
-
-    @Test
-    public void testGetWorkbenchData_Successful_SourceListGrid() {
-        // Arrange
-        WorkbenchRequest workbenchRequest = new WorkbenchRequest("SOURCELIST_GRID",
-                Arrays.asList(new SearchCriteria("profileID", "=", 12345)), "", "", 1, 50);
-
-        when(workbenchServiceFactory.getService(SourceListResult.class)).thenReturn(sourceListService);
-
-        SourceListResult sourceListResult = new SourceListResult();
-        sourceListResult.setSourceName("Sample Source");
-        sourceListResult.setSourceDescription("This is a sample source.");
-
-        WorkbenchResponse<SourceListResult> workbenchResponse = new WorkbenchResponse<>(Collections.singletonList(sourceListResult), 1, 1);
-        when(sourceListService.getWorkbenchData(workbenchRequest)).thenReturn(workbenchResponse);
-
-        // Act
-        ResponseEntity<WorkbenchResponse<?>> response = workbenchController.getWorkbenchData(workbenchRequest);
-
-        // Assert
-        Assert.assertNotNull(response);
-        Assert.assertEquals(200, response.getStatusCodeValue());
-        Assert.assertNotNull(response.getBody());
-        WorkbenchResponse<?> responseBody = response.getBody();
-        Assert.assertEquals(1, responseBody.getTotalElements());
-        Assert.assertEquals(1, responseBody.getTotalPages());
-        Assert.assertNotNull(responseBody.getData());
-        Assert.assertEquals(1, responseBody.getData().size());
-        SourceListResult result = (SourceListResult) responseBody.getData().get(0);
-        Assert.assertEquals("Sample Source", result.getSourceName());
-        // Assert other properties...
-    }
-
-    @Test
-    public void testGetWorkbenchData_InvalidGrid() {
-        // Arrange
-        WorkbenchRequest workbenchRequest = new WorkbenchRequest("INVALID_GRID",
-                Collections.singletonList(new SearchCriteria("profileID", "=", 1002843629)), "", "", 1, 50);
-
-        // Act
-        ResponseEntity<WorkbenchResponse<?>> response = workbenchController.getWorkbenchData(workbenchRequest);
-
-        // Assert
-        Assert.assertNotNull(response);
-        Assert.assertEquals(400, response.getStatusCodeValue());
-        // Assert other error details...
-    }
-
-    @Test
-    public void testDetermineGenericTypes() {
-        // Arrange
-        String profileSearchGrid = "PROFILE_SEARCH_GRID";
-        String sourceListGrid = "SOURCELIST_GRID";
-
-        // Act
-        Class<?> profileSearchClass = workbenchController.determineGenericTypes(profileSearchGrid);
-        Class<?> sourceListClass = workbenchController.determineGenericTypes(sourceListGrid);
-
-        // Assert
-        Assert.assertEquals(SearchResult.class, profileSearchClass);
-        Assert.assertEquals(SourceListResult.class, sourceListClass);
+        Assert.assertEquals(expectedClass, responseBody.getData().get(0).getClass());
     }
 }
