@@ -1,141 +1,65 @@
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import java.util.Collections;
+import static org.mockito.Mockito.*;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-@RunWith(MockitoJUnitRunner.class)
-@WebMvcTest(WorkbenchController.class)
+@RunWith(SpringRunner.class)
+@SpringBootTest
+@AutoConfigureMockMvc
 public class WorkbenchControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    @Mock
-    private WorkbenchService workbenchService;
-
-    @InjectMocks
-    private WorkbenchController workbenchController;
+    @MockBean
+    private WorkbenchServiceFactory workbenchServiceFactory;
 
     @Test
-    public void testSearchProfiles() throws Exception {
-        // Sample request
-        String request = "{ \"gridId\": \"PROFILE_SEARCH_GRID\", \"searchcriteriaList\": [{ \"queryKey\": \"profileID\", \"queryopeator\": \"=\", \"queryValue\": \"10629\" }], \"sortColumn\": \"\", \"sortDirection\": \"\", \"pageSize\": \"50\", \"pageNo\": 1 }";
+    public void testGetWorkbenchData_ProfileSearchGrid_ReturnsValidData() throws Exception {
+        // Arrange
+        WorkbenchRequest request = createSampleRequest();
+        WorkbenchResponse<SearchResult> expectedResponse = createSampleResponse();
+        WorkbenchService<SearchResult> mockService = mock(WorkbenchService.class);
 
-        // Sample response
-        String response = "{ \"data\": [{ \"firstName\": \"Muhed Kriz\", \"lastName\": \"Khalid\", \"sourceListName\": \" }
-        when(workbenchService.searchProfiles(any())).thenReturn(response);
+        when(workbenchServiceFactory.getService(SearchResult.class)).thenReturn(mockService);
+        when(mockService.getWorkbenchData(any(WorkbenchRequest.class))).thenReturn(expectedResponse);
 
-        mockMvc.perform(post("/searchProfiles")
+        // Act
+        MvcResult result = mockMvc.perform(post("/pm-ui-api/workbench")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
+                .content(asJsonString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].firstName").value("Muhammed Khairiz"));
+                .andReturn();
+
+        // Assert
+        verify(mockService, times(1)).getWorkbenchData(eq(request));
+        String actualResponseBody = result.getResponse().getContentAsString();
+        assertThat(actualResponseBody).isEqualTo(asJsonString(expectedResponse));
+    }
+
+    private WorkbenchRequest createSampleRequest() {
+        List<SearchCriteria> searchCriteriaList = Collections.singletonList(
+                new SearchCriteria("profileID", "=", "56464")
+        );
+        return new WorkbenchRequest("PROFILE_SEARCH_GRID", searchCriteriaList, "", "", 50, 1);
+    }
+
+    private WorkbenchResponse<SearchResult> createSampleResponse() {
+        SearchResult resultItem = new SearchResult();
+        resultItem.setFirstName("Muhh Khriz");
+        resultItem.setLastName("Khid");
+        // ... set other properties
+
+        List<SearchResult> resultList = Collections.singletonList(resultItem);
+
+        WorkbenchResponse<SearchResult> response = new WorkbenchResponse<>();
+        response.setData(resultList);
+        response.setTotalElements(1L);
+        response.setTotalPages(1);
+
+        return response;
+    }
+
+    // Helper method to convert object to JSON string
+    private String asJsonString(Object obj) throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        return objectMapper.writeValueAsString(obj);
     }
 }
-
-
-
-//////service //////
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-
-@RunWith(MockitoJUnitRunner.class)
-public class WorkbenchServiceTest {
-
-    @Mock
-    private WorkbenchRepository workbenchRepository;
-
-    @InjectMocks
-    private WorkbenchServiceImpl workbenchService;
-
-    @Test
-    public void testSearchProfiles() {
-        // Sample request
-        WorkbenchSearchRequest request = new WorkbenchSearchRequest();
-        request.setGridId("PROFILE_SEARCH_GRID");
-        request.setSearchcriteriaList(Collections.singletonList(new SearchCriteria("profileID", "=", "1002843629")));
-        request.setSortColumn("");
-        request.setSortDirection("");
-        request.setPageSize("50");
-        request.setPageNo(1);
-
-        // Sample response
-        String response = "{ \"data\": [{ \"firstName\": \"Muhd Khz\", \"lastName\": \"Kid\", \"sourceListName\": \"", \"nationalities\": null, \"status\": \"Active\", \"complianceUnit\": null,\"domicile\": null, \"creationDate\": \"2023-09-20\", \"updatedDate\": null, \"profileID\": 100629, \"ownershipCountry\": null, \"ownershipDivision\": null, \"dob\": \"1976,1977\", \"onboardingCategory\": null, \"totalRowCount\": 1, \"notes\": null }], \"totalElements\": 1, \"totalPages\": 1 }";
-
-        when(workbenchRepository.searchProfiles(any())).thenReturn(response);
-
-        String result = workbenchService.searchProfiles(request);
-
-        assertNotNull(result);
-        assertEquals(response, result);
-    }
-}
-
-
-
-////ssrvice impl ////
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-
-@RunWith(MockitoJUnitRunner.class)
-public class WorkbenchServiceImplTest {
-
-    @Mock
-    private WorkbenchRepository workbenchRepository;
-
-    @InjectMocks
-    private WorkbenchServiceImpl workbenchService;
-
-    @Test
-    public void testSearchProfiles() {
-        // Sample request
-        WorkbenchSearchRequest request = new WorkbenchSearchRequest();
-        request.setGridId("PROFILE_SEARCH_GRID");
-        request.setSearchcriteriaList(Collections.singletonList(new SearchCriteria("profileID", "=", "1002843629")));
-        request.setSortColumn("");
-        request.setSortDirection("");
-        request.setPageSize("50");
-        request.setPageNo(1);
-
-        // Sample response
-        
-        when(workbenchRepository.searchProfiles(any())).thenReturn(response);
-
-        String result = workbenchService.searchProfiles(request);
-
-        assertNotNull(result);
-        assertEquals(response, result);
-    }
-}
-
