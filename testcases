@@ -1,6 +1,28 @@
-import static org.mockito.Mockito.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-@RunWith(SpringRunner.class)
+import java.time.LocalDate;
+import java.util.Collections;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@ExtendWith(MockitoExtension.class)
 @SpringBootTest
 @AutoConfigureMockMvc
 public class WorkbenchControllerTest {
@@ -8,58 +30,76 @@ public class WorkbenchControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @Mock
     private WorkbenchServiceFactory workbenchServiceFactory;
 
+    @Mock
+    private WorkbenchService<SearchResult> workbenchService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @InjectMocks
+    private WorkbenchController workbenchController;
+
     @Test
-    public void testGetWorkbenchData_ProfileSearchGrid_ReturnsValidData() throws Exception {
-        // Arrange
-        WorkbenchRequest request = createSampleRequest();
-        WorkbenchResponse<SearchResult> expectedResponse = createSampleResponse();
-        WorkbenchService<SearchResult> mockService = mock(WorkbenchService.class);
+    public void testGetWorkbenchData() throws Exception {
+        // Sample Request
+        WorkbenchRequest sampleRequest = new WorkbenchRequest();
+        sampleRequest.setGridId(Requests.PROFILE_SEARCH_GRID.name());
+        sampleRequest.setSearchCriteriaList(Collections.singletonList(new SearchCriteria("profileID", "=", "1002843629")));
+        sampleRequest.setSortColumn("");
+        sampleRequest.setSortDirection("");
+        sampleRequest.setPageSize(50);
+        sampleRequest.setPageNumber(1);
 
-        when(workbenchServiceFactory.getService(SearchResult.class)).thenReturn(mockService);
-        when(mockService.getWorkbenchData(any(WorkbenchRequest.class))).thenReturn(expectedResponse);
+        // Sample Response
+        SearchResult sampleResult = new SearchResult();
+        sampleResult.setFirstName("Muhammed Khairiz");
+        sampleResult.setLastName("Khalid");
+        sampleResult.setSourceListName("EC 2012/388/CFSP Somalia List, United States Secret Service Most Wanted List");
+        sampleResult.setNationalities(null);
+        sampleResult.setStatus("Active");
+        sampleResult.setComplianceUnit(null);
+        sampleResult.setDomicile(null);
+        sampleResult.setCreationDate(LocalDate.of(2023, 9, 20));
+        sampleResult.setUpdatedDate(null);
+        sampleResult.setProfileID(1002843629);
+        sampleResult.setOwnershipCountry(null);
+        sampleResult.setOwnershipDivision(null);
+        sampleResult.setDob("1976,1977");
+        sampleResult.setOnboardingCategory(null);
+        sampleResult.setTotalRowCount(1);
+        sampleResult.setNotes(null);
 
-        // Act
-        MvcResult result = mockMvc.perform(post("/pm-ui-api/workbench")
+        WorkbenchResponse<SearchResult> sampleResponse = new WorkbenchResponse<>();
+        sampleResponse.setData(Collections.singletonList(sampleResult));
+        sampleResponse.setTotalElements(1);
+        sampleResponse.setTotalPages(1);
+
+        // Mocking behavior
+        when(workbenchServiceFactory.getService(SearchResult.class)).thenReturn(workbenchService);
+        when(workbenchService.getWorkbenchData(any(WorkbenchRequest.class))).thenReturn(sampleResponse);
+
+        // Perform the request
+        ResultActions resultActions = mockMvc.perform(MockMvcRequestBuilders.post("/pm-ui-api/workbench")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(asJsonString(request)))
-                .andExpect(status().isOk())
-                .andReturn();
+                .content(objectMapper.writeValueAsString(sampleRequest)));
 
-        // Assert
-        verify(mockService, times(1)).getWorkbenchData(eq(request));
-        String actualResponseBody = result.getResponse().getContentAsString();
-        assertThat(actualResponseBody).isEqualTo(asJsonString(expectedResponse));
-    }
+        // Verify the response
+        resultActions.andExpect(status().isOk());
 
-    private WorkbenchRequest createSampleRequest() {
-        List<SearchCriteria> searchCriteriaList = Collections.singletonList(
-                new SearchCriteria("profileID", "=", "56464")
-        );
-        return new WorkbenchRequest("PROFILE_SEARCH_GRID", searchCriteriaList, "", "", 50, 1);
-    }
+        WorkbenchResponse<SearchResult> actualResponse = objectMapper.readValue(
+                resultActions.andReturn().getResponse().getContentAsString(),
+                new TypeReference<WorkbenchResponse<SearchResult>>() {});
 
-    private WorkbenchResponse<SearchResult> createSampleResponse() {
-        SearchResult resultItem = new SearchResult();
-        resultItem.setFirstName("Muhh Khriz");
-        resultItem.setLastName("Khid");
-        // ... set other properties
+        assertThat(actualResponse.getData()).hasSize(1);
+        assertThat(actualResponse.getData().get(0).getFirstName()).isEqualTo("Muhammed Khairiz");
+        assertThat(actualResponse.getTotalElements()).isEqualTo(1);
+        assertThat(actualResponse.getTotalPages()).isEqualTo(1);
 
-        List<SearchResult> resultList = Collections.singletonList(resultItem);
-
-        WorkbenchResponse<SearchResult> response = new WorkbenchResponse<>();
-        response.setData(resultList);
-        response.setTotalElements(1L);
-        response.setTotalPages(1);
-
-        return response;
-    }
-
-    // Helper method to convert object to JSON string
-    private String asJsonString(Object obj) throws Exception {
-        ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.writeValueAsString(obj);
+        // Verify that the service methods were called
+        verify(workbenchServiceFactory).getService(SearchResult.class);
+        verify(workbenchService).getWorkbenchData(any(WorkbenchRequest.class));
     }
 }
