@@ -2,76 +2,83 @@
 
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+@RunWith(SpringRunner.class)
+@SpringBootTest
 public class QueryGeneratorFactoryTest {
 
-    @Mock
-    private SQLQueryReader sqlQueryReader;
-
-    @Mock
-    private QueryGenerator searchGridQueryGenerator;
-
-    @Mock
-    private QueryGenerator sourceListGridQueryGenerator;
-
-    @Mock
-    private QueryGenerator sourceListProfileGridQueryGenerator;
-
-    @InjectMocks
+    @Autowired
     private QueryGeneratorFactory queryGeneratorFactory;
 
+    private QueryGenerator searchGridQueryGenerator;
+    private QueryGenerator sourceListGridQueryGenerator;
+    private QueryGenerator sourceListProfileGridQueryGenerator;
+
     @Before
-    public void setUp() throws IOException {
-        MockitoAnnotations.initMocks(this);
+    public void setUp() {
+        searchGridQueryGenerator = mock(SearchGridQueryGenerator.class);
+        sourceListGridQueryGenerator = mock(QueryGenerator.class);
+        sourceListProfileGridQueryGenerator = mock(QueryGenerator.class);
 
-        // Mock SQLQueryReader behavior
-        when(sqlQueryReader.getSqlQuery()).thenReturn(getTestQueries());
-
-        // Mock QueryGenerator behavior if needed
-        when(searchGridQueryGenerator.getGeneratedQuery()).thenReturn("SearchGridQuery");
-        when(sourceListGridQueryGenerator.getGeneratedQuery()).thenReturn("SourceListGridQuery");
-        when(sourceListProfileGridQueryGenerator.getGeneratedQuery()).thenReturn("SourceListProfileGridQuery");
-    }
-
-    private Map<String, String> getTestQueries() {
-        // Mocked SQL queries
         Map<String, String> queries = new HashMap<>();
-        queries.put("PROFILE_SEARCH_GRID", "SELECT * FROM profiles;");
-        queries.put("SOURCE_LIST_GRID", "SELECT * FROM sources;");
-        queries.put("SOURCE_LIST_PROFILE_GRID", "SELECT * FROM source_profiles;");
-        return queries;
+        queries.put("PROFILE_SEARCH_GRID", "SELECT * FROM profile_search_table");
+        queries.put("SOURCE_LIST_GRID", "SELECT * FROM source_list_table");
+        queries.put("SOURCE_LIST_PROFILE_GRID", "SELECT * FROM source_list_profile_table");
+
+        queryGeneratorFactory.setSearchGridQueryGenerator(searchGridQueryGenerator);
+        queryGeneratorFactory.setSourceListGridQueryGenerator(sourceListGridQueryGenerator);
+        queryGeneratorFactory.setSourceListProfileGridQueryGenerator(sourceListProfileGridQueryGenerator);
+        queryGeneratorFactory.setQueries(queries);
+
+        // Mock the behavior of SQLQueryReader.getSqlQuery()
+        try {
+            when(SQLQueryReader.getSqlQuery()).thenReturn(queries);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Test
-    public void testGetQueryGeneratorForSearchGrid() {
+    public void testGetQueryGenerator_ProfileSearchGrid() {
         QueryGenerator result = queryGeneratorFactory.getQueryGenerator("PROFILE_SEARCH_GRID");
-        assertEquals("SearchGridQuery", result.getGeneratedQuery());
+
+        assertEquals(searchGridQueryGenerator, result);
+        verify(searchGridQueryGenerator).setFixedQuery("SELECT * FROM profile_search_table");
     }
 
     @Test
-    public void testGetQueryGeneratorForSourceListGrid() {
+    public void testGetQueryGenerator_SourceListGrid() {
         QueryGenerator result = queryGeneratorFactory.getQueryGenerator("SOURCE_LIST_GRID");
-        assertEquals("SourceListGridQuery", result.getGeneratedQuery());
+
+        assertEquals(sourceListGridQueryGenerator, result);
+        verify(sourceListGridQueryGenerator).setFixedQuery("SELECT * FROM source_list_table");
     }
 
     @Test
-    public void testGetQueryGeneratorForSourceListProfileGrid() {
+    public void testGetQueryGenerator_SourceListProfileGrid() {
         QueryGenerator result = queryGeneratorFactory.getQueryGenerator("SOURCE_LIST_PROFILE_GRID");
-        assertEquals("SourceListProfileGridQuery", result.getGeneratedQuery());
+
+        assertEquals(sourceListProfileGridQueryGenerator, result);
+        verify(sourceListProfileGridQueryGenerator).setFixedQuery("SELECT * FROM source_list_profile_table");
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testGetQueryGeneratorForInvalidGridName() {
-        queryGeneratorFactory.getQueryGenerator("INVALID_GRID");
+    public void testGetQueryGenerator_InvalidGridName() {
+        queryGeneratorFactory.getQueryGenerator("INVALID_GRID_NAME");
     }
+
+    // Add more test cases as needed to cover different scenarios and edge cases
 }
