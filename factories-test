@@ -102,3 +102,108 @@ public class QueryGeneratorFactoryTest {
         }
     }
 }
+
+
+///////////////////// ROW MAPPER ///////////
+
+// RowMapperFactoryTest.java
+import org.testng.annotations.Test;
+import org.mockito.Mock;
+import org.mockito.InjectMocks;
+import org.mockito.MockitoAnnotations;
+
+import static org.mockito.Mockito.*;
+import static org.testng.Assert.*;
+
+public class RowMapperFactoryTest {
+
+    @InjectMocks
+    private RowMapperFactory rowMapperFactory;
+
+    @Mock
+    private RowMapper searchGridRowMapper;
+
+    @Mock
+    private RowMapper sourcelistGridRowMapper;
+
+    @Mock
+    private RowMapper sourceListProfileGridRowMapper;
+
+    @Mock
+    private RowMapper complianceUnitRowMapper;
+
+    @Test
+    public void testGetRowMapperSearchGrid() {
+        RowMapper result = rowMapperFactory.getRowMapper("PROFILE_SEARCH_GRID");
+        assertEquals(result, searchGridRowMapper);
+    }
+
+    @Test
+    public void testGetRowMapperSourceListGrid() {
+        RowMapper result = rowMapperFactory.getRowMapper("SOURCE_LIST_GRID");
+        assertEquals(result, sourcelistGridRowMapper);
+    }
+
+    @Test
+    public void testGetRowMapperSourceListProfileGrid() {
+        RowMapper result = rowMapperFactory.getRowMapper("SOURCE_LIST_PROFILE_GRID");
+        assertEquals(result, sourceListProfileGridRowMapper);
+    }
+
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void testGetRowMapperInvalidGridName() {
+        rowMapperFactory.getRowMapper("INVALID_GRID_NAME");
+    }
+}
+
+///// COLUMNE SELECTOR ///////////////
+
+// ColumnSelectorFactoryTest.java
+import org.testng.annotations.Test;
+import org.mockito.Mock;
+import org.mockito.InjectMocks;
+import org.mockito.MockitoAnnotations;
+
+import static org.mockito.Mockito.*;
+import static org.testng.Assert.*;
+
+public class ColumnSelectorFactoryTest {
+
+    @InjectMocks
+    private ColumnSelectorFactory columnSelectorFactory;
+
+    @Mock
+    private ColumnSelector searchGridColumnSelector;
+
+    @Mock
+    private ColumnSelector sourceListGridColumnSelector;
+
+    @Mock
+    private ColumnSelector sourceListProfileGridColumnSelector;
+
+    @Mock
+    private ColumnSelector complianceUnitColumnSelector;
+
+    @Test
+    public void testGetColumnSelectorSearchGrid() {
+        ColumnSelector result = columnSelectorFactory.getColumnSelector("PROFILE_SEARCH_GRID");
+        assertEquals(result, searchGridColumnSelector);
+    }
+
+    @Test
+    public void testGetColumnSelectorSourceListGrid() {
+        ColumnSelector result = columnSelectorFactory.getColumnSelector("SOURCE_LIST_GRID");
+        assertEquals(result, sourceListGridColumnSelector);
+    }
+
+    @Test
+    public void testGetColumnSelectorSourceListProfileGrid() {
+        ColumnSelector result = columnSelectorFactory.getColumnSelector("SOURCE_LIST_PROFILE_GRID");
+        assertEquals(result, sourceListProfileGridColumnSelector);
+    }
+
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void testGetColumnSelectorInvalidGridName() {
+        columnSelectorFactory.getColumnSelector("INVALID_GRID_NAME");
+    }
+}
