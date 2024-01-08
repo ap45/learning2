@@ -1,0 +1,104 @@
+import org.junit.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import java.util.Collections;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+public class WorkbenchServiceTest<T> {
+
+    @InjectMocks
+    private WorkbenchServiceImpl<T> workbenchService;
+
+    @Mock
+    private WorkbenchDao<T> mockWorkbenchDao;
+
+    @Mock
+    private QueryGeneratorFactory mockQueryGeneratorFactory;
+
+    @Mock
+    private ColumnSelectorFactory mockColumnSelectorFactory;
+
+    @Test
+    public void testGetWorkbenchData_ProfileSearchGrid_Success() {
+        // Arrange
+        MockitoAnnotations.initMocks(this);
+
+        WorkbenchRequest workbenchRequest = createProfileSearchRequest();
+        QueryGenerator mockQueryGenerator = mock(ProfileSearchGridQueryGenerator.class);
+        ColumnSelector mockColumnSelector = mock(ProfileColumnSelector.class);
+
+        when(mockQueryGeneratorFactory.getQueryGenerator(any())).thenReturn(mockQueryGenerator);
+        when(mockColumnSelectorFactory.getColumnSelector(any())).thenReturn(mockColumnSelector);
+
+        workbenchService.setWorkbenchDao(mockWorkbenchDao);
+
+        List<T> mockResultList = Collections.singletonList(createMockEntity());
+        when(mockWorkbenchDao.getWorkbenchData(any(), any(), any())).thenReturn(mockResultList);
+
+        // Act
+        WorkbenchResponse<T> result = workbenchService.getWorkbenchData(workbenchRequest);
+
+        // Assert
+        verify(mockQueryGeneratorFactory, times(1)).getQueryGenerator(any());
+        verify(mockColumnSelectorFactory, times(1)).getColumnSelector(any());
+        verify(mockQueryGenerator, times(1)).setWorkbenchRequest(any());
+        verify(mockQueryGenerator, times(1)).setColumnSelector(any());
+        verify(mockWorkbenchDao, times(1)).getWorkbenchData(any(), any(), any());
+
+        assertEquals(mockResultList, result.getData());
+        assertEquals(Long.valueOf(1), result.getTotalElements());
+        assertEquals(Integer.valueOf(1), result.getTotalPages());
+    }
+
+    @Test
+    public void testGetWorkbenchData_SourceListGrid_Success() {
+        // Arrange
+        MockitoAnnotations.initMocks(this);
+
+        WorkbenchRequest workbenchRequest = createSourceListRequest();
+        QueryGenerator mockQueryGenerator = mock(SourceListGridQueryGenerator.class);
+        ColumnSelector mockColumnSelector = mock(SourceListColumnSelector.class);
+
+        when(mockQueryGeneratorFactory.getQueryGenerator(any())).thenReturn(mockQueryGenerator);
+        when(mockColumnSelectorFactory.getColumnSelector(any())).thenReturn(mockColumnSelector);
+
+        workbenchService.setWorkbenchDao(mockWorkbenchDao);
+
+        List<T> mockResultList = Collections.singletonList(createMockEntity());
+        when(mockWorkbenchDao.getWorkbenchData(any(), any(), any())).thenReturn(mockResultList);
+
+        // Act
+        WorkbenchResponse<T> result = workbenchService.getWorkbenchData(workbenchRequest);
+
+        // Assert
+        verify(mockQueryGeneratorFactory, times(1)).getQueryGenerator(any());
+        verify(mockColumnSelectorFactory, times(1)).getColumnSelector(any());
+        verify(mockQueryGenerator, times(1)).setWorkbenchRequest(any());
+        verify(mockQueryGenerator, times(1)).setColumnSelector(any());
+        verify(mockWorkbenchDao, times(1)).getWorkbenchData(any(), any(), any());
+
+        assertEquals(mockResultList, result.getData());
+        assertEquals(Long.valueOf(1), result.getTotalElements());
+        assertEquals(Integer.valueOf(1), result.getTotalPages());
+    }
+
+    // Helper methods...
+
+    private WorkbenchRequest createProfileSearchRequest() {
+        // Create and return a sample profile search request
+    }
+
+    private WorkbenchRequest createSourceListRequest() {
+        // Create and return a sample source list request
+    }
+
+    private T createMockEntity() {
+        // Create and return a mock entity for testing
+    }
+}
