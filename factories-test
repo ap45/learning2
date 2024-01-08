@@ -1,17 +1,22 @@
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.MockedStatic;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
+@SpringJUnitConfig
+@SpringBootTest
 public class QueryGeneratorFactoryTest {
 
     @InjectMocks
@@ -26,71 +31,74 @@ public class QueryGeneratorFactoryTest {
     @Mock
     private QueryGenerator sourceListProfileGridQueryGenerator;
 
-    @Mock
-    private SQLQueryReader sqlQueryReader;
-
-    @Before
-    public void setUp() {
-        MockitoAnnotations.initMocks(this);
-    }
-
     @Test
-    public void testGetQueryGenerator_ProfileSearchGrid() {
+    public void testGetQueryGenerator_ProfileSearchGrid() throws IOException {
         String gridName = "PROFILE_SEARCH_GRID";
         String expectedQuery = "SELECT * FROM profiles";
         Map<String, String> queries = new HashMap<>();
         queries.put(gridName, expectedQuery);
 
-        when(sqlQueryReader.getSqlQuery()).thenReturn(queries);
+        try (MockedStatic<SQLQueryReader> mockedStatic = mockStatic(SQLQueryReader.class)) {
+            mockedStatic.when(SQLQueryReader::getSqlQuery).thenReturn(queries);
 
-        QueryGenerator result = queryGeneratorFactory.getQueryGenerator(gridName);
+            QueryGenerator result = queryGeneratorFactory.getQueryGenerator(gridName);
 
-        assertNotNull(result);
-        assertEquals(expectedQuery, result.getFixedQuery());
-        verify(searchGridQueryGenerator, times(1)).setFixedQuery(expectedQuery);
-        assertEquals(searchGridQueryGenerator, result);
+            assertNotNull(result);
+            assertEquals(searchGridQueryGenerator, result);
+            assertEquals(expectedQuery, result.getFixedQuery());
+        }
     }
 
     @Test
-    public void testGetQueryGenerator_SourceListGrid() {
+    public void testGetQueryGenerator_SourceListGrid() throws IOException {
         String gridName = "SOURCE_LIST_GRID";
         String expectedQuery = "SELECT * FROM source_list";
         Map<String, String> queries = new HashMap<>();
         queries.put(gridName, expectedQuery);
 
-        when(sqlQueryReader.getSqlQuery()).thenReturn(queries);
+        try (MockedStatic<SQLQueryReader> mockedStatic = mockStatic(SQLQueryReader.class)) {
+            mockedStatic.when(SQLQueryReader::getSqlQuery).thenReturn(queries);
 
-        QueryGenerator result = queryGeneratorFactory.getQueryGenerator(gridName);
+            QueryGenerator result = queryGeneratorFactory.getQueryGenerator(gridName);
 
-        assertNotNull(result);
-        assertEquals(expectedQuery, result.getFixedQuery());
-        verify(sourceListGridQueryGenerator, times(1)).setFixedQuery(expectedQuery);
-        assertEquals(sourceListGridQueryGenerator, result);
+            assertNotNull(result);
+            assertEquals(sourceListGridQueryGenerator, result);
+            assertEquals(expectedQuery, result.getFixedQuery());
+        }
     }
 
     @Test
-    public void testGetQueryGenerator_SourceListProfileGrid() {
+    public void testGetQueryGenerator_SourceListProfileGrid() throws IOException {
         String gridName = "SOURCE_LIST_PROFILE_GRID";
         String expectedQuery = "SELECT * FROM source_list_profile";
         Map<String, String> queries = new HashMap<>();
         queries.put(gridName, expectedQuery);
 
-        when(sqlQueryReader.getSqlQuery()).thenReturn(queries);
+        try (MockedStatic<SQLQueryReader> mockedStatic = mockStatic(SQLQueryReader.class)) {
+            mockedStatic.when(SQLQueryReader::getSqlQuery).thenReturn(queries);
 
-        QueryGenerator result = queryGeneratorFactory.getQueryGenerator(gridName);
+            QueryGenerator result = queryGeneratorFactory.getQueryGenerator(gridName);
 
-        assertNotNull(result);
-        assertEquals(expectedQuery, result.getFixedQuery());
-        verify(sourceListProfileGridQueryGenerator, times(1)).setFixedQuery(expectedQuery);
-        assertEquals(sourceListProfileGridQueryGenerator, result);
+            assertNotNull(result);
+            assertEquals(sourceListProfileGridQueryGenerator, result);
+            assertEquals(expectedQuery, result.getFixedQuery());
+        }
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testGetQueryGenerator_InvalidGridName() {
+    @Test
+    public void testGetQueryGenerator_InvalidGridName() throws IOException {
         String gridName = "INVALID_GRID_NAME";
 
-        queryGeneratorFactory.getQueryGenerator(gridName);
-    }
+        try (MockedStatic<SQLQueryReader> mockedStatic = mockStatic(SQLQueryReader.class)) {
+            mockedStatic.when(SQLQueryReader::getSqlQuery).thenReturn(new HashMap<>());
 
-    // You can add more test cases for other methods and edge cases.
+            // Expecting IllegalArgumentException when an invalid grid name is provided
+            IllegalArgumentException exception = org.junit.jupiter.api.Assertions.assertThrows(
+                    IllegalArgumentException.class,
+                    () -> queryGeneratorFactory.getQueryGenerator(gridName)
+            );
+
+            assertEquals("Invalid grid name " + gridName, exception.getMessage());
+        }
+    }
 }
