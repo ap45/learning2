@@ -1,84 +1,96 @@
-////////Query Generator Factory ////
-
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.Assert.assertNotNull;
+import static org.mockito.Mockito.*;
 
-@RunWith(SpringRunner.class)
-@SpringBootTest
 public class QueryGeneratorFactoryTest {
 
-    @Autowired
+    @InjectMocks
     private QueryGeneratorFactory queryGeneratorFactory;
 
+    @Mock
     private QueryGenerator searchGridQueryGenerator;
+
+    @Mock
     private QueryGenerator sourceListGridQueryGenerator;
+
+    @Mock
     private QueryGenerator sourceListProfileGridQueryGenerator;
+
+    @Mock
+    private SQLQueryReader sqlQueryReader;
 
     @Before
     public void setUp() {
-        searchGridQueryGenerator = mock(SearchGridQueryGenerator.class);
-        sourceListGridQueryGenerator = mock(QueryGenerator.class);
-        sourceListProfileGridQueryGenerator = mock(QueryGenerator.class);
-
-        Map<String, String> queries = new HashMap<>();
-        queries.put("PROFILE_SEARCH_GRID", "SELECT * FROM profile_search_table");
-        queries.put("SOURCE_LIST_GRID", "SELECT * FROM source_list_table");
-        queries.put("SOURCE_LIST_PROFILE_GRID", "SELECT * FROM source_list_profile_table");
-
-        queryGeneratorFactory.setSearchGridQueryGenerator(searchGridQueryGenerator);
-        queryGeneratorFactory.setSourceListGridQueryGenerator(sourceListGridQueryGenerator);
-        queryGeneratorFactory.setSourceListProfileGridQueryGenerator(sourceListProfileGridQueryGenerator);
-        queryGeneratorFactory.setQueries(queries);
-
-        // Mock the behavior of SQLQueryReader.getSqlQuery()
-        try {
-            when(SQLQueryReader.getSqlQuery()).thenReturn(queries);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        MockitoAnnotations.initMocks(this);
     }
 
     @Test
     public void testGetQueryGenerator_ProfileSearchGrid() {
-        QueryGenerator result = queryGeneratorFactory.getQueryGenerator("PROFILE_SEARCH_GRID");
+        String gridName = "PROFILE_SEARCH_GRID";
+        String expectedQuery = "SELECT * FROM profiles";
+        Map<String, String> queries = new HashMap<>();
+        queries.put(gridName, expectedQuery);
 
+        when(sqlQueryReader.getSqlQuery()).thenReturn(queries);
+
+        QueryGenerator result = queryGeneratorFactory.getQueryGenerator(gridName);
+
+        assertNotNull(result);
+        assertEquals(expectedQuery, result.getFixedQuery());
+        verify(searchGridQueryGenerator, times(1)).setFixedQuery(expectedQuery);
         assertEquals(searchGridQueryGenerator, result);
-        verify(searchGridQueryGenerator).setFixedQuery("SELECT * FROM profile_search_table");
     }
 
     @Test
     public void testGetQueryGenerator_SourceListGrid() {
-        QueryGenerator result = queryGeneratorFactory.getQueryGenerator("SOURCE_LIST_GRID");
+        String gridName = "SOURCE_LIST_GRID";
+        String expectedQuery = "SELECT * FROM source_list";
+        Map<String, String> queries = new HashMap<>();
+        queries.put(gridName, expectedQuery);
 
+        when(sqlQueryReader.getSqlQuery()).thenReturn(queries);
+
+        QueryGenerator result = queryGeneratorFactory.getQueryGenerator(gridName);
+
+        assertNotNull(result);
+        assertEquals(expectedQuery, result.getFixedQuery());
+        verify(sourceListGridQueryGenerator, times(1)).setFixedQuery(expectedQuery);
         assertEquals(sourceListGridQueryGenerator, result);
-        verify(sourceListGridQueryGenerator).setFixedQuery("SELECT * FROM source_list_table");
     }
 
     @Test
     public void testGetQueryGenerator_SourceListProfileGrid() {
-        QueryGenerator result = queryGeneratorFactory.getQueryGenerator("SOURCE_LIST_PROFILE_GRID");
+        String gridName = "SOURCE_LIST_PROFILE_GRID";
+        String expectedQuery = "SELECT * FROM source_list_profile";
+        Map<String, String> queries = new HashMap<>();
+        queries.put(gridName, expectedQuery);
 
+        when(sqlQueryReader.getSqlQuery()).thenReturn(queries);
+
+        QueryGenerator result = queryGeneratorFactory.getQueryGenerator(gridName);
+
+        assertNotNull(result);
+        assertEquals(expectedQuery, result.getFixedQuery());
+        verify(sourceListProfileGridQueryGenerator, times(1)).setFixedQuery(expectedQuery);
         assertEquals(sourceListProfileGridQueryGenerator, result);
-        verify(sourceListProfileGridQueryGenerator).setFixedQuery("SELECT * FROM source_list_profile_table");
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testGetQueryGenerator_InvalidGridName() {
-        queryGeneratorFactory.getQueryGenerator("INVALID_GRID_NAME");
+        String gridName = "INVALID_GRID_NAME";
+
+        queryGeneratorFactory.getQueryGenerator(gridName);
     }
 
-    // Add more test cases as needed to cover different scenarios and edge cases
+    // You can add more test cases for other methods and edge cases.
 }
