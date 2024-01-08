@@ -52,6 +52,14 @@ public class WorkbenchServiceImplTest {
         assertEquals(createMockedResultList(), result.getData());
         assertEquals(1, result.getTotalElements().longValue());
         assertEquals(1, result.getTotalPages());
+
+        // Verify statements for PROFILE_SEARCH_GRID
+        verify(queryGeneratorFactory, times(1)).getQueryGenerator("PROFILE_SEARCH_GRID");
+        verify(columnSelectorFactory, times(1)).getColumnSelector("PROFILE_SEARCH_GRID");
+        verify(queryGenerator, times(1)).setColumnSelector(columnSelector);
+        verify(queryGenerator, times(1)).setWorkbenchRequest(workbenchRequest);
+        verify(queryGenerator, times(1)).buildQuery();
+        verify(workbenchDao, times(1)).getWorkbenchData("PROFILE_SEARCH_GRID", "mockedQuery", fieldValues);
     }
 
     @Test
@@ -76,6 +84,14 @@ public class WorkbenchServiceImplTest {
         assertEquals(createMockedResultList(), result.getData());
         assertEquals(1, result.getTotalElements().longValue());
         assertEquals(1, result.getTotalPages());
+
+        // Verify statements for SOURCE_LIST_GRID
+        verify(queryGeneratorFactory, times(1)).getQueryGenerator("SOURCE_LIST_GRID");
+        verify(columnSelectorFactory, times(1)).getColumnSelector("SOURCE_LIST_GRID");
+        verify(queryGenerator, times(1)).setColumnSelector(columnSelector);
+        verify(queryGenerator, times(1)).setWorkbenchRequest(workbenchRequest);
+        verify(queryGenerator, times(1)).buildQuery();
+        verify(workbenchDao, times(1)).getWorkbenchData("SOURCE_LIST_GRID", "mockedQuery", fieldValues);
     }
 
     private WorkbenchRequest createProfileSearchGridRequest() {
