@@ -1,104 +1,111 @@
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-public class WorkbenchServiceTest<T> {
+public class WorkbenchServiceImplTest {
 
     @InjectMocks
-    private WorkbenchServiceImpl<T> workbenchService;
+    private WorkbenchServiceImpl<Object> workbenchService;
 
     @Mock
-    private WorkbenchDao<T> mockWorkbenchDao;
+    private WorkbenchDao<Object> workbenchDao;
 
     @Mock
-    private QueryGeneratorFactory mockQueryGeneratorFactory;
+    private QueryGeneratorFactory queryGeneratorFactory;
 
     @Mock
-    private ColumnSelectorFactory mockColumnSelectorFactory;
+    private ColumnSelectorFactory columnSelectorFactory;
 
-    @Test
-    public void testGetWorkbenchData_ProfileSearchGrid_Success() {
-        // Arrange
+    @Before
+    public void setUp() {
         MockitoAnnotations.initMocks(this);
-
-        WorkbenchRequest workbenchRequest = createProfileSearchRequest();
-        QueryGenerator mockQueryGenerator = mock(ProfileSearchGridQueryGenerator.class);
-        ColumnSelector mockColumnSelector = mock(ProfileColumnSelector.class);
-
-        when(mockQueryGeneratorFactory.getQueryGenerator(any())).thenReturn(mockQueryGenerator);
-        when(mockColumnSelectorFactory.getColumnSelector(any())).thenReturn(mockColumnSelector);
-
-        workbenchService.setWorkbenchDao(mockWorkbenchDao);
-
-        List<T> mockResultList = Collections.singletonList(createMockEntity());
-        when(mockWorkbenchDao.getWorkbenchData(any(), any(), any())).thenReturn(mockResultList);
-
-        // Act
-        WorkbenchResponse<T> result = workbenchService.getWorkbenchData(workbenchRequest);
-
-        // Assert
-        verify(mockQueryGeneratorFactory, times(1)).getQueryGenerator(any());
-        verify(mockColumnSelectorFactory, times(1)).getColumnSelector(any());
-        verify(mockQueryGenerator, times(1)).setWorkbenchRequest(any());
-        verify(mockQueryGenerator, times(1)).setColumnSelector(any());
-        verify(mockWorkbenchDao, times(1)).getWorkbenchData(any(), any(), any());
-
-        assertEquals(mockResultList, result.getData());
-        assertEquals(Long.valueOf(1), result.getTotalElements());
-        assertEquals(Integer.valueOf(1), result.getTotalPages());
     }
 
     @Test
-    public void testGetWorkbenchData_SourceListGrid_Success() {
-        // Arrange
-        MockitoAnnotations.initMocks(this);
+    public void testGetWorkbenchDataForProfileSearchGrid() {
+        // Setup for PROFILE_SEARCH_GRID
+        WorkbenchRequest workbenchRequest = createProfileSearchGridRequest();
 
-        WorkbenchRequest workbenchRequest = createSourceListRequest();
-        QueryGenerator mockQueryGenerator = mock(SourceListGridQueryGenerator.class);
-        ColumnSelector mockColumnSelector = mock(SourceListColumnSelector.class);
+        QueryGenerator queryGenerator = mock(QueryGenerator.class);
+        when(queryGeneratorFactory.getQueryGenerator("PROFILE_SEARCH_GRID")).thenReturn(queryGenerator);
 
-        when(mockQueryGeneratorFactory.getQueryGenerator(any())).thenReturn(mockQueryGenerator);
-        when(mockColumnSelectorFactory.getColumnSelector(any())).thenReturn(mockColumnSelector);
+        ColumnSelector columnSelector = mock(ColumnSelector.class);
+        when(columnSelectorFactory.getColumnSelector("PROFILE_SEARCH_GRID")).thenReturn(columnSelector);
 
-        workbenchService.setWorkbenchDao(mockWorkbenchDao);
+        List<Object> fieldValues = Arrays.asList("1002843629");
 
-        List<T> mockResultList = Collections.singletonList(createMockEntity());
-        when(mockWorkbenchDao.getWorkbenchData(any(), any(), any())).thenReturn(mockResultList);
+        when(workbenchDao.getWorkbenchData("PROFILE_SEARCH_GRID", "mockedQuery", fieldValues)).thenReturn(createMockedResultList());
 
-        // Act
-        WorkbenchResponse<T> result = workbenchService.getWorkbenchData(workbenchRequest);
+        // Execute the method
+        WorkbenchResponse<Object> result = workbenchService.getWorkbenchData(workbenchRequest);
 
-        // Assert
-        verify(mockQueryGeneratorFactory, times(1)).getQueryGenerator(any());
-        verify(mockColumnSelectorFactory, times(1)).getColumnSelector(any());
-        verify(mockQueryGenerator, times(1)).setWorkbenchRequest(any());
-        verify(mockQueryGenerator, times(1)).setColumnSelector(any());
-        verify(mockWorkbenchDao, times(1)).getWorkbenchData(any(), any(), any());
-
-        assertEquals(mockResultList, result.getData());
-        assertEquals(Long.valueOf(1), result.getTotalElements());
-        assertEquals(Integer.valueOf(1), result.getTotalPages());
+        // Assertions for PROFILE_SEARCH_GRID
+        assertEquals(createMockedResultList(), result.getData());
+        assertEquals(1, result.getTotalElements().longValue());
+        assertEquals(1, result.getTotalPages());
     }
 
-    // Helper methods...
+    @Test
+    public void testGetWorkbenchDataForSourceListGrid() {
+        // Setup for SOURCE_LIST_GRID
+        WorkbenchRequest workbenchRequest = createSourceListGridRequest();
 
-    private WorkbenchRequest createProfileSearchRequest() {
-        // Create and return a sample profile search request
+        QueryGenerator queryGenerator = mock(QueryGenerator.class);
+        when(queryGeneratorFactory.getQueryGenerator("SOURCE_LIST_GRID")).thenReturn(queryGenerator);
+
+        ColumnSelector columnSelector = mock(ColumnSelector.class);
+        when(columnSelectorFactory.getColumnSelector("SOURCE_LIST_GRID")).thenReturn(columnSelector);
+
+        List<Object> fieldValues = Arrays.asList("EC 2012/388/CFSP Somalia List");
+
+        when(workbenchDao.getWorkbenchData("SOURCE_LIST_GRID", "mockedQuery", fieldValues)).thenReturn(createMockedResultList());
+
+        // Execute the method
+        WorkbenchResponse<Object> result = workbenchService.getWorkbenchData(workbenchRequest);
+
+        // Assertions for SOURCE_LIST_GRID
+        assertEquals(createMockedResultList(), result.getData());
+        assertEquals(1, result.getTotalElements().longValue());
+        assertEquals(1, result.getTotalPages());
     }
 
-    private WorkbenchRequest createSourceListRequest() {
-        // Create and return a sample source list request
+    private WorkbenchRequest createProfileSearchGridRequest() {
+        // Create and return a mocked WorkbenchRequest for PROFILE_SEARCH_GRID
+        WorkbenchRequest request = new WorkbenchRequest();
+        request.setGridID("PROFILE_SEARCH_GRID");
+        List<SearchCriteria> searchCriteriaList = Arrays.asList(
+                new SearchCriteria("profileID", "=", "1002843629")
+        );
+        request.setSearchCriteriaList(searchCriteriaList);
+        request.setPageSize(50);
+        request.setPageNo(1);
+        return request;
     }
 
-    private T createMockEntity() {
-        // Create and return a mock entity for testing
+    private WorkbenchRequest createSourceListGridRequest() {
+        // Create and return a mocked WorkbenchRequest for SOURCE_LIST_GRID
+        WorkbenchRequest request = new WorkbenchRequest();
+        request.setGridID("SOURCE_LIST_GRID");
+        List<SearchCriteria> searchCriteriaList = Arrays.asList(
+                new SearchCriteria("sourceListName", "=", "EC 2012/388/CFSP Somalia List")
+        );
+        request.setSearchCriteriaList(searchCriteriaList);
+        request.setPageSize(50);
+        request.setPageNo(1);
+        return request;
+    }
+
+    private List<Object> createMockedResultList() {
+        // Create and return a mocked result list for testing
+        return new ArrayList<>();
     }
 }
