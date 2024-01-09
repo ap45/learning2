@@ -27,6 +27,111 @@ public class QueryGeneratorTest {
         queryGenerator.setFixedQuery("SELECT * FROM table");
     }
 
+
+
+
+
+
+//////////////////////////////////// SEARCH GRID QUERYGENERATOR //////////////////////////
+
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
+
+import java.util.Arrays;
+
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
+
+@RunWith(MockitoJUnitRunner.class)
+public class SearchGridQueryGeneratorTest {
+
+    @InjectMocks
+    private SearchGridQueryGenerator searchGridQueryGenerator;
+
+    @Mock
+    private WorkbenchRequest workbenchRequest;
+
+    @Mock
+    private ColumnSelector columnSelector;
+
+    @Before
+    public void setUp() {
+        // Mock the behavior of abstract methods in QueryGenerator
+        doNothing().when(searchGridQueryGenerator).setWorkbenchRequest(any());
+        doNothing().when(searchGridQueryGenerator).setColumnSelector(any());
+    }
+
+    @Test
+    public void testBuildQueryWithSortingAndPagination() {
+        when(workbenchRequest.getSortColumn()).thenReturn("column");
+        when(workbenchRequest.getSortDirectionList()).thenReturn("ASC");
+        when(workbenchRequest.getPageNo()).thenReturn(1);
+        when(workbenchRequest.getPageSize()).thenReturn(10);
+        when(columnSelector.getcolumnMetaData("column"))
+                .thenReturn(new ColumnMetaData("column", "column", "column", true, "VARCHAR", "VARCHAR", true, false, true));
+
+        searchGridQueryGenerator.setWorkbenchRequest(workbenchRequest);
+        searchGridQueryGenerator.setColumnSelector(columnSelector);
+
+        String result = searchGridQueryGenerator.buildQuery();
+        assertNotNull(result);
+
+        assertTrue(result.contains("ORDER BY column ASC"));
+        assertTrue(result.contains("OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY"));
+    }
+
+    @Test
+    public void testBuildQueryWithWhereClause() {
+        SearchCriteria searchCriteria = new SearchCriteria("Name", "name", "=", "John");
+        when(workbenchRequest.getSearchCriterialist()).thenReturn(Arrays.asList(searchCriteria));
+        when(columnSelector.getColumnMetabata("name"))
+                .thenReturn(new ColumnMetaData("Name", "name", "name", true, "VARCHAR", "VARCHAR", true, false, true));
+
+        searchGridQueryGenerator.setWorkbenchRequest(workbenchRequest);
+        searchGridQueryGenerator.setColumnSelector(columnSelector);
+
+        String result = searchGridQueryGenerator.buildQuery();
+        assertNotNull(result);
+
+        assertTrue(result.contains("AND name = :param0"));
+    }
+
+    @Test
+    public void testBuildQueryWithMultipleWhereClauses() {
+        SearchCriteria criteria1 = new SearchCriteria("Name", "name", "=", "John");
+        SearchCriteria criteria2 = new SearchCriteria("Age", "age", "=", 25);
+
+        when(workbenchRequest.getSearchCriterialist()).thenReturn(Arrays.asList(criteria1, criteria2));
+        when(columnSelector.getColumnMetabata("name"))
+                .thenReturn(new ColumnMetaData("Name", "name", "name", true, "VARCHAR", "VARCHAR", true, false, true));
+        when(columnSelector.getColumnMetabata("age"))
+                .thenReturn(new ColumnMetaData("Age", "age", "age", true, "INTEGER", "INTEGER", true, false, true));
+
+        searchGridQueryGenerator.setWorkbenchRequest(workbenchRequest);
+        searchGridQueryGenerator.setColumnSelector(columnSelector);
+
+        String result = searchGridQueryGenerator.buildQuery();
+        assertNotNull(result);
+
+        assertTrue(result.contains("AND name = :param0"));
+        assertTrue(result.contains("AND age = :param1"));
+    }
+
+    // Add more test cases for other methods and edge cases
+
+    @Test
+    public void testAdditionalMethod() {
+        // Test another method if needed
+    }
+}
+
+
+
+
     @Test
     public void testBuildQueryWithSortingAndPagination() {
         when(workbenchRequest.getSortColumn()).thenReturn("column");
