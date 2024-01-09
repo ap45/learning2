@@ -1,0 +1,80 @@
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
+
+public class QueryGeneratorTest {
+
+    private QueryGenerator queryGenerator;
+
+    @Before
+    public void setUp() {
+        queryGenerator = new QueryGeneratorImpl(); // Assume QueryGeneratorImpl is a concrete implementation of QueryGenerator
+    }
+
+    @Test
+    public void testSetWorkbenchRequest() {
+        WorkbenchRequest workbenchRequest = mock(WorkbenchRequest.class);
+        queryGenerator.setWorkbenchRequest(workbenchRequest);
+        assertEquals(workbenchRequest, queryGenerator.workbenchRequest);
+    }
+
+    @Test
+    public void testSetColumnSelector() {
+        ColumnSelector columnSelector = mock(ColumnSelector.class);
+        queryGenerator.setColumnSelector(columnSelector);
+        assertEquals(columnSelector, queryGenerator.columnSelector);
+    }
+
+    @Test
+    public void testSetFixedQuery() {
+        String fixedQuery = "SELECT * FROM table";
+        queryGenerator.setFixedQuery(fixedQuery);
+        assertEquals(fixedQuery, queryGenerator.getFixedQuery());
+    }
+
+    @Test
+    public void testBuildQueryWithSorting() {
+        // Mock dependencies
+        WorkbenchRequest workbenchRequest = mock(WorkbenchRequest.class);
+        ColumnSelector columnSelector = mock(ColumnSelector.class);
+
+        // Set up QueryGenerator
+        queryGenerator.setWorkbenchRequest(workbenchRequest);
+        queryGenerator.setColumnSelector(columnSelector);
+        queryGenerator.setFixedQuery("SELECT * FROM table");
+
+        // Define expectations
+        when(workbenchRequest.getSortColumn()).thenReturn("column");
+        when(workbenchRequest.getSortDirectionList()).thenReturn("ASC");
+        when(columnSelector.getcolumnMetaData("column")).thenReturn(new ColumnMetaData("column", "VARCHAR", false));
+
+        // Test
+        String result = queryGenerator.buildQuery();
+        assertNotNull(result);
+        assertTrue(result.contains("ORDER BY column ASC"));
+    }
+
+    @Test
+    public void testBuildQueryWithPagination() {
+        // Mock dependencies
+        WorkbenchRequest workbenchRequest = mock(WorkbenchRequest.class);
+        ColumnSelector columnSelector = mock(ColumnSelector.class);
+
+        // Set up QueryGenerator
+        queryGenerator.setWorkbenchRequest(workbenchRequest);
+        queryGenerator.setColumnSelector(columnSelector);
+        queryGenerator.setFixedQuery("SELECT * FROM table");
+
+        // Define expectations
+        when(workbenchRequest.getPageNo()).thenReturn(2);
+        when(workbenchRequest.getPageSize()).thenReturn(10);
+
+        // Test
+        String result = queryGenerator.buildQuery();
+        assertNotNull(result);
+        assertTrue(result.contains("OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY"));
+    }
+
+    // Add more test cases as needed for other methods and edge cases
+}
