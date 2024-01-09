@@ -80,3 +80,52 @@ public class SourceListServiceTest {
         assertEquals("Sourcelist not found with id " + id, exception.getMessage());
     }
 }
+
+
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
+
+public class SourceListServiceTest {
+
+    @InjectMocks
+    private SourceListService sourceListService;
+
+    @Mock
+    private RpmSrcListRefTEntityRepository rpmSrcListRefTEntityRepository;
+
+    @Before
+    public void setUp() {
+        MockitoAnnotations.initMocks(this);
+    }
+
+    @Test
+    public void testEditSourceListNotFound() {
+        Integer id = 1;
+        SourceListCreateData sourceListEditData = new SourceListCreateData();
+        sourceListEditData.setSourceListTitle("Updated Title");
+        sourceListEditData.setDescription("Updated Description");
+        sourceListEditData.setSourceListStatus("Inactive");
+        sourceListEditData.setSpecialTreatment("No");
+
+        when(rpmSrcListRefTEntityRepository.findById(id)).thenReturn(Optional.empty());
+
+        String expectedErrorMessage = "Error updating SourceListRef: SourceList not found with id " + id;
+
+        ResourceUpdationException exception = assertThrows(ResourceUpdationException.class, () -> {
+            sourceListService.editSourceList(id, sourceListEditData);
+        });
+
+        assertEquals(expectedErrorMessage, exception.getMessage());
+
+        verify(rpmSrcListRefTEntityRepository, never()).save(any(RpmSrcListRefTEntity.class));
+    }
+}
