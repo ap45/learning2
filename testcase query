@@ -1,47 +1,34 @@
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.boot.test.context.SpringBootTest;
+
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
+@RunWith(MockitoJUnitRunner.class)
+@SpringBootTest
 public class QueryGeneratorTest {
 
-    private QueryGenerator queryGenerator;
+    @InjectMocks
+    private QueryGeneratorImpl queryGenerator;
+
+    @Mock
+    private WorkbenchRequest workbenchRequest;
+
+    @Mock
+    private ColumnSelector columnSelector;
 
     @Before
     public void setUp() {
-        queryGenerator = new QueryGeneratorImpl();
-    }
-
-    @Test
-    public void testSetWorkbenchRequest() {
-        WorkbenchRequest workbenchRequest = mock(WorkbenchRequest.class);
-        queryGenerator.setWorkbenchRequest(workbenchRequest);
-        assertEquals(workbenchRequest, queryGenerator.workbenchRequest);
-    }
-
-    @Test
-    public void testSetColumnSelector() {
-        ColumnSelector columnSelector = mock(ColumnSelector.class);
-        queryGenerator.setColumnSelector(columnSelector);
-        assertEquals(columnSelector, queryGenerator.columnSelector);
-    }
-
-    @Test
-    public void testSetFixedQuery() {
-        String fixedQuery = "SELECT * FROM table";
-        queryGenerator.setFixedQuery(fixedQuery);
-        assertEquals(fixedQuery, queryGenerator.getFixedQuery());
+        queryGenerator.setFixedQuery("SELECT * FROM table");
     }
 
     @Test
     public void testBuildQueryWithSortingAndPagination() {
-        WorkbenchRequest workbenchRequest = mock(WorkbenchRequest.class);
-        ColumnSelector columnSelector = mock(ColumnSelector.class);
-
-        queryGenerator.setWorkbenchRequest(workbenchRequest);
-        queryGenerator.setColumnSelector(columnSelector);
-        queryGenerator.setFixedQuery("SELECT * FROM table");
-
         when(workbenchRequest.getSortColumn()).thenReturn("column");
         when(workbenchRequest.getSortDirectionList()).thenReturn("ASC");
         when(workbenchRequest.getPageNo()).thenReturn(1);
@@ -58,13 +45,6 @@ public class QueryGeneratorTest {
 
     @Test
     public void testBuildQueryWithWhereClause() {
-        WorkbenchRequest workbenchRequest = mock(WorkbenchRequest.class);
-        ColumnSelector columnSelector = mock(ColumnSelector.class);
-
-        queryGenerator.setWorkbenchRequest(workbenchRequest);
-        queryGenerator.setColumnSelector(columnSelector);
-        queryGenerator.setFixedQuery("SELECT * FROM table");
-
         SearchCriteria searchCriteria = new SearchCriteria("Name", "name", "=", "John");
         when(workbenchRequest.getSearchCriterialist()).thenReturn(Arrays.asList(searchCriteria));
         when(columnSelector.getColumnMetabata("name"))
@@ -78,13 +58,6 @@ public class QueryGeneratorTest {
 
     @Test
     public void testBuildQueryWithMultipleWhereClauses() {
-        WorkbenchRequest workbenchRequest = mock(WorkbenchRequest.class);
-        ColumnSelector columnSelector = mock(ColumnSelector.class);
-
-        queryGenerator.setWorkbenchRequest(workbenchRequest);
-        queryGenerator.setColumnSelector(columnSelector);
-        queryGenerator.setFixedQuery("SELECT * FROM table");
-
         SearchCriteria criteria1 = new SearchCriteria("Name", "name", "=", "John");
         SearchCriteria criteria2 = new SearchCriteria("Age", "age", "=", 25);
 
