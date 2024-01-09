@@ -63,10 +63,14 @@ public class SearchGridQueryGeneratorTest {
         // Mock the behavior of abstract methods in QueryGenerator
         doNothing().when(searchGridQueryGenerator).setWorkbenchRequest(any());
         doNothing().when(searchGridQueryGenerator).setColumnSelector(any());
+        doNothing().when(searchGridQueryGenerator).setFixedQuery(anyString());
     }
 
     @Test
     public void testBuildQueryWithSortingAndPagination() {
+        // Mocking for setFixedQuery
+        searchGridQueryGenerator.setFixedQuery("SELECT * FROM table");
+
         when(workbenchRequest.getSortColumn()).thenReturn("column");
         when(workbenchRequest.getSortDirectionList()).thenReturn("ASC");
         when(workbenchRequest.getPageNo()).thenReturn(1);
@@ -80,12 +84,16 @@ public class SearchGridQueryGeneratorTest {
         String result = searchGridQueryGenerator.buildQuery();
         assertNotNull(result);
 
+        assertTrue(result.contains("SELECT * FROM table"));
         assertTrue(result.contains("ORDER BY column ASC"));
         assertTrue(result.contains("OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY"));
     }
 
     @Test
     public void testBuildQueryWithWhereClause() {
+        // Mocking for setFixedQuery
+        searchGridQueryGenerator.setFixedQuery("SELECT * FROM table");
+
         SearchCriteria searchCriteria = new SearchCriteria("Name", "name", "=", "John");
         when(workbenchRequest.getSearchCriterialist()).thenReturn(Arrays.asList(searchCriteria));
         when(columnSelector.getColumnMetabata("name"))
@@ -97,11 +105,15 @@ public class SearchGridQueryGeneratorTest {
         String result = searchGridQueryGenerator.buildQuery();
         assertNotNull(result);
 
+        assertTrue(result.contains("SELECT * FROM table"));
         assertTrue(result.contains("AND name = :param0"));
     }
 
     @Test
     public void testBuildQueryWithMultipleWhereClauses() {
+        // Mocking for setFixedQuery
+        searchGridQueryGenerator.setFixedQuery("SELECT * FROM table");
+
         SearchCriteria criteria1 = new SearchCriteria("Name", "name", "=", "John");
         SearchCriteria criteria2 = new SearchCriteria("Age", "age", "=", 25);
 
@@ -117,23 +129,29 @@ public class SearchGridQueryGeneratorTest {
         String result = searchGridQueryGenerator.buildQuery();
         assertNotNull(result);
 
+        assertTrue(result.contains("SELECT * FROM table"));
         assertTrue(result.contains("AND name = :param0"));
         assertTrue(result.contains("AND age = :param1"));
     }
 
+    @Test
+    public void testBuildQueryWithFixedQueryOnly() {
+        // Mocking for setFixedQuery
+        searchGridQueryGenerator.setFixedQuery("SELECT * FROM table");
+
+        String result = searchGridQueryGenerator.buildQuery();
+        assertNotNull(result);
+
+        assertTrue(result.contains("SELECT * FROM table"));
+    }
+
     // Add more test cases for other methods and edge cases
 
-    @Test
-    public void testAdditionalMethod() {
-        // Test another method if needed
-    }
-}
+@Test
+    public void testBuildCompleteQuery() {
+        // Mocking for setFixedQuery
+        searchGridQueryGenerator.setFixedQuery("SELECT * FROM table");
 
-
-
-
-    @Test
-    public void testBuildQueryWithSortingAndPagination() {
         when(workbenchRequest.getSortColumn()).thenReturn("column");
         when(workbenchRequest.getSortDirectionList()).thenReturn("ASC");
         when(workbenchRequest.getPageNo()).thenReturn(1);
@@ -141,28 +159,6 @@ public class SearchGridQueryGeneratorTest {
         when(columnSelector.getcolumnMetaData("column"))
                 .thenReturn(new ColumnMetaData("column", "column", "column", true, "VARCHAR", "VARCHAR", true, false, true));
 
-        String result = queryGenerator.buildQuery();
-        assertNotNull(result);
-
-        assertTrue(result.contains("ORDER BY column ASC"));
-        assertTrue(result.contains("OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY"));
-    }
-
-    @Test
-    public void testBuildQueryWithWhereClause() {
-        SearchCriteria searchCriteria = new SearchCriteria("Name", "name", "=", "John");
-        when(workbenchRequest.getSearchCriterialist()).thenReturn(Arrays.asList(searchCriteria));
-        when(columnSelector.getColumnMetabata("name"))
-                .thenReturn(new ColumnMetaData("Name", "name", "name", true, "VARCHAR", "VARCHAR", true, false, true));
-
-        String result = queryGenerator.buildQuery();
-        assertNotNull(result);
-
-        assertTrue(result.contains("AND name = :param0"));
-    }
-
-    @Test
-    public void testBuildQueryWithMultipleWhereClauses() {
         SearchCriteria criteria1 = new SearchCriteria("Name", "name", "=", "John");
         SearchCriteria criteria2 = new SearchCriteria("Age", "age", "=", 25);
 
@@ -172,12 +168,19 @@ public class SearchGridQueryGeneratorTest {
         when(columnSelector.getColumnMetabata("age"))
                 .thenReturn(new ColumnMetaData("Age", "age", "age", true, "INTEGER", "INTEGER", true, false, true));
 
-        String result = queryGenerator.buildQuery();
+        searchGridQueryGenerator.setWorkbenchRequest(workbenchRequest);
+        searchGridQueryGenerator.setColumnSelector(columnSelector);
+
+        String result = searchGridQueryGenerator.buildQuery();
         assertNotNull(result);
 
-        assertTrue(result.contains("AND name = :param0"));
-        assertTrue(result.contains("AND age = :param1"));
+        // Check the complete query
+        String expectedQuery = "SELECT * FROM table" +
+                " ORDER BY column ASC" +
+                " AND name = :param0" +
+                " AND age = :param1" +
+                " OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY";
+        assertEquals(expectedQuery, result);
     }
 
-    // Add more test cases for other methods and edge cases
 }
