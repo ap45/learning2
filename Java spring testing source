@@ -1,0 +1,82 @@
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+public class SourceListServiceTest {
+
+    @InjectMocks
+    private SourceListService sourceListService;
+
+    @Mock
+    private RpmSrcListRefTEntityRepository rpmSrcListRefTEntityRepository;
+
+    @Before
+    public void setUp() {
+        MockitoAnnotations.initMocks(this);
+    }
+
+    @Test
+    @Transactional
+    public void testCreateSourceList() {
+        SourceListCreateData createData = new SourceListCreateData();
+        createData.setSourceListTitle("Test Source List");
+        createData.setDescription("Test Description");
+        createData.setSourceListStatus("Active");
+        createData.setSpecialTreatment("Yes");
+
+        sourceListService.createSourceList(createData);
+
+        verify(rpmSrcListRefTEntityRepository, times(1)).save(any(RpmSrcListRefTEntity.class));
+
+        // You can add additional assertions if needed
+    }
+
+    @Test
+    public void testEditSourceList() {
+        Integer id = 1;
+        SourceListCreateData sourceListEditData = new SourceListCreateData();
+        sourceListEditData.setSourceListTitle("Updated Title");
+        sourceListEditData.setDescription("Updated Description");
+        sourceListEditData.setSourceListStatus("Inactive");
+        sourceListEditData.setSpecialTreatment("No");
+
+        RpmSrcListRefTEntity sourceListEntity = new RpmSrcListRefTEntity();
+        sourceListEntity.setSourceListRefId(id);
+        Optional<RpmSrcListRefTEntity> optional = Optional.of(sourceListEntity);
+
+        when(rpmSrcListRefTEntityRepository.findById(id)).thenReturn(optional);
+
+        sourceListService.editSourceList(id, sourceListEditData);
+
+        verify(rpmSrcListRefTEntityRepository, times(1)).save(any(RpmSrcListRefTEntity.class));
+
+        assertEquals("Updated Title", sourceListEntity.getSourceListTitle());
+        assertEquals("Updated Description", sourceListEntity.getDescription());
+        assertEquals("Inactive", sourceListEntity.getSourceListStatus());
+        assertEquals("No", sourceListEntity.getSpecialTreatment());
+        assertNotNull(sourceListEntity.getModifiedOn());
+    }
+
+    @Test
+    public void testEditSourceListNotFound() {
+        Integer id = 1;
+        SourceListCreateData sourceListEditData = new SourceListCreateData();
+
+        when(rpmSrcListRefTEntityRepository.findById(id)).thenReturn(Optional.empty());
+
+        NotFoundException exception = assertThrows(NotFoundException.class, () -> {
+            sourceListService.editSourceList(id, sourceListEditData);
+        });
+
+        assertEquals("Sourcelist not found with id " + id, exception.getMessage());
+    }
+}
