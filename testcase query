@@ -9,7 +9,7 @@ public class QueryGeneratorTest {
 
     @Before
     public void setUp() {
-        queryGenerator = new QueryGeneratorImpl(); // Assume QueryGeneratorImpl is a concrete implementation of QueryGenerator
+        queryGenerator = new QueryGeneratorImpl();
     }
 
     @Test
@@ -34,47 +34,72 @@ public class QueryGeneratorTest {
     }
 
     @Test
-    public void testBuildQueryWithSorting() {
-        // Mock dependencies
+    public void testBuildQueryWithSortingAndPagination() {
         WorkbenchRequest workbenchRequest = mock(WorkbenchRequest.class);
         ColumnSelector columnSelector = mock(ColumnSelector.class);
 
-        // Set up QueryGenerator
         queryGenerator.setWorkbenchRequest(workbenchRequest);
         queryGenerator.setColumnSelector(columnSelector);
         queryGenerator.setFixedQuery("SELECT * FROM table");
 
-        // Define expectations
         when(workbenchRequest.getSortColumn()).thenReturn("column");
         when(workbenchRequest.getSortDirectionList()).thenReturn("ASC");
-        when(columnSelector.getcolumnMetaData("column")).thenReturn(new ColumnMetaData("column", "VARCHAR", false));
+        when(workbenchRequest.getPageNo()).thenReturn(1);
+        when(workbenchRequest.getPageSize()).thenReturn(10);
+        when(columnSelector.getcolumnMetaData("column"))
+                .thenReturn(new ColumnMetaData("column", "column", "column", true, "VARCHAR", "VARCHAR", true, false, true));
 
-        // Test
         String result = queryGenerator.buildQuery();
         assertNotNull(result);
+
         assertTrue(result.contains("ORDER BY column ASC"));
+        assertTrue(result.contains("OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY"));
     }
 
     @Test
-    public void testBuildQueryWithPagination() {
-        // Mock dependencies
+    public void testBuildQueryWithWhereClause() {
         WorkbenchRequest workbenchRequest = mock(WorkbenchRequest.class);
         ColumnSelector columnSelector = mock(ColumnSelector.class);
 
-        // Set up QueryGenerator
         queryGenerator.setWorkbenchRequest(workbenchRequest);
         queryGenerator.setColumnSelector(columnSelector);
         queryGenerator.setFixedQuery("SELECT * FROM table");
 
-        // Define expectations
-        when(workbenchRequest.getPageNo()).thenReturn(2);
-        when(workbenchRequest.getPageSize()).thenReturn(10);
+        SearchCriteria searchCriteria = new SearchCriteria("Name", "name", "=", "John");
+        when(workbenchRequest.getSearchCriterialist()).thenReturn(Arrays.asList(searchCriteria));
+        when(columnSelector.getColumnMetabata("name"))
+                .thenReturn(new ColumnMetaData("Name", "name", "name", true, "VARCHAR", "VARCHAR", true, false, true));
 
-        // Test
         String result = queryGenerator.buildQuery();
         assertNotNull(result);
-        assertTrue(result.contains("OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY"));
+
+        assertTrue(result.contains("AND name = :param0"));
     }
 
-    // Add more test cases as needed for other methods and edge cases
+    @Test
+    public void testBuildQueryWithMultipleWhereClauses() {
+        WorkbenchRequest workbenchRequest = mock(WorkbenchRequest.class);
+        ColumnSelector columnSelector = mock(ColumnSelector.class);
+
+        queryGenerator.setWorkbenchRequest(workbenchRequest);
+        queryGenerator.setColumnSelector(columnSelector);
+        queryGenerator.setFixedQuery("SELECT * FROM table");
+
+        SearchCriteria criteria1 = new SearchCriteria("Name", "name", "=", "John");
+        SearchCriteria criteria2 = new SearchCriteria("Age", "age", "=", 25);
+
+        when(workbenchRequest.getSearchCriterialist()).thenReturn(Arrays.asList(criteria1, criteria2));
+        when(columnSelector.getColumnMetabata("name"))
+                .thenReturn(new ColumnMetaData("Name", "name", "name", true, "VARCHAR", "VARCHAR", true, false, true));
+        when(columnSelector.getColumnMetabata("age"))
+                .thenReturn(new ColumnMetaData("Age", "age", "age", true, "INTEGER", "INTEGER", true, false, true));
+
+        String result = queryGenerator.buildQuery();
+        assertNotNull(result);
+
+        assertTrue(result.contains("AND name = :param0"));
+        assertTrue(result.contains("AND age = :param1"));
+    }
+
+    // Add more test cases for other methods and edge cases
 }
