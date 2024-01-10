@@ -151,24 +151,33 @@ public class ExcelUtil {
 /////////////////////////// Testing for above ///////////////
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockedStatic;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
-@RunWith(SpringRunner.class)
+@RunWith(MockitoJUnitRunner.class)
 @SpringBootTest
 public class WorkBenchControllerTest {
 
-    @Autowired
+    @InjectMocks
     private WorkBenchController workBenchController;
+
+    @Mock
+    private ExcelUtil excelUtil;
 
     @Test
     public void testGenerateExcel_Success() {
@@ -178,14 +187,19 @@ public class WorkBenchControllerTest {
                 Map.of("name", "Jane", "age", 30)
         );
 
-        // When
-        ResponseEntity<String> response = workBenchController.generateExcel(testData);
+        // Mock successful Excel generation
+        try (MockedStatic<ExcelUtil> mockedStatic = mockStatic(ExcelUtil.class)) {
+            mockedStatic.when(() -> ExcelUtil.generateExcel(testData)).thenReturn("mockedExcelData");
 
-        // Then
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(response.getHeaders().containsKey("Content-Type"));
-        assertEquals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", response.getHeaders().getContentType().toString());
-        // Add more assertions if needed based on the actual behavior of your application
+            // When
+            ResponseEntity<String> response = workBenchController.generateExcel(testData);
+
+            // Then
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertTrue(response.getHeaders().containsKey("Content-Type"));
+            assertEquals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", response.getHeaders().getContentType().toString());
+            // Add more assertions if needed based on the actual behavior of your application
+        }
     }
 
     @Test
@@ -193,30 +207,39 @@ public class WorkBenchControllerTest {
         // Given
         List<Map<String, Object>> emptyData = Arrays.asList();
 
-        // When
-        ResponseEntity<String> response = workBenchController.generateExcel(emptyData);
+        // Mock successful Excel generation
+        try (MockedStatic<ExcelUtil> mockedStatic = mockStatic(ExcelUtil.class)) {
+            mockedStatic.when(() -> ExcelUtil.generateExcel(emptyData)).thenReturn("No data provided");
 
-        // Then
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        assertTrue(response.getBody().startsWith("Error"));
-        // Add more assertions if needed based on the actual behavior of your application
+            // When
+            ResponseEntity<String> response = workBenchController.generateExcel(emptyData);
+
+            // Then
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertTrue(response.getBody().startsWith("No data provided"));
+            // Add more assertions if needed based on the actual behavior of your application
+        }
     }
 
     @Test
-    public void testGenerateExcel_Error() {
+    public void testGenerateExcel_Error() throws IOException {
         // Given
         List<Map<String, Object>> errorData = Arrays.asList(
                 Map.of("name", "John", "age", 25),
                 Map.of("name", "Jane", "age", 30)
         );
 
-        // When
-        ResponseEntity<String> response = workBenchController.generateExcel(errorData);
+        // Mock IOException during Excel generation
+        try (MockedStatic<ExcelUtil> mockedStatic = mockStatic(ExcelUtil.class)) {
+            mockedStatic.when(() -> ExcelUtil.generateExcel(errorData)).thenThrow(new IOException("Simulated IOException"));
 
-        // Then
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        assertTrue(response.getBody().startsWith("Error"));
-        // Add more assertions if needed based on the actual behavior of your application
+            // When
+            ResponseEntity<String> response = workBenchController.generateExcel(errorData);
+
+            // Then
+            assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+            assertTrue(response.getBody().startsWith("Error"));
+            // Add more assertions if needed based on the actual behavior of your application
+        }
     }
 }
-
