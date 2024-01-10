@@ -148,3 +148,75 @@ public class ExcelUtil {
     }
 }
 
+/////////////////////////// Testing for above ///////////////
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class WorkBenchControllerTest {
+
+    @Autowired
+    private WorkBenchController workBenchController;
+
+    @Test
+    public void testGenerateExcel_Success() {
+        // Given
+        List<Map<String, Object>> testData = Arrays.asList(
+                Map.of("name", "John", "age", 25),
+                Map.of("name", "Jane", "age", 30)
+        );
+
+        // When
+        ResponseEntity<String> response = workBenchController.generateExcel(testData);
+
+        // Then
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getHeaders().containsKey("Content-Type"));
+        assertEquals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", response.getHeaders().getContentType().toString());
+        // Add more assertions if needed based on the actual behavior of your application
+    }
+
+    @Test
+    public void testGenerateExcel_EmptyData() {
+        // Given
+        List<Map<String, Object>> emptyData = Arrays.asList();
+
+        // When
+        ResponseEntity<String> response = workBenchController.generateExcel(emptyData);
+
+        // Then
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertTrue(response.getBody().startsWith("Error"));
+        // Add more assertions if needed based on the actual behavior of your application
+    }
+
+    @Test
+    public void testGenerateExcel_Error() {
+        // Given
+        List<Map<String, Object>> errorData = Arrays.asList(
+                Map.of("name", "John", "age", 25),
+                Map.of("name", "Jane", "age", 30)
+        );
+
+        // When
+        ResponseEntity<String> response = workBenchController.generateExcel(errorData);
+
+        // Then
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertTrue(response.getBody().startsWith("Error"));
+        // Add more assertions if needed based on the actual behavior of your application
+    }
+}
+
