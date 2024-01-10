@@ -1,0 +1,123 @@
+// DrmUserLogService.java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.Date;
+
+@Service
+public class DrmUserLogService {
+
+    private final DrmUserLogRepository drmUserLogRepository;
+
+    @Autowired
+    public DrmUserLogService(DrmUserLogRepository drmUserLogRepository) {
+        this.drmUserLogRepository = drmUserLogRepository;
+    }
+
+    public void logUserDetails(UserDetailPayload userDetailPayload) {
+        DrmUserLogEntity logEntity = new DrmUserLogEntity();
+        logEntity.setEmail(userDetailPayload.getEmail());
+        logEntity.setGpin(userDetailPayload.getGpin());
+        logEntity.setGridId(userDetailPayload.getGridId());
+        logEntity.setTime(new Date());  // Current timestamp
+        logEntity.setDocumentLabel(userDetailPayload.getDocumentLabel());
+        // Set other fields...
+
+        drmUserLogRepository.save(logEntity);
+    }
+}
+
+
+// UserDetailPayload.java
+public class UserDetailPayload {
+
+    private String profileId;
+
+    private String gpin;
+
+    private String documentLabel;
+
+    private String gridid;
+
+    private Integer totalElements;
+
+
+
+
+
+
+
+
+///////////////////Test cases///////////////
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
+
+import static org.mockito.Mockito.*;
+
+import static org.junit.Assert.assertEquals;
+
+@RunWith(MockitoJUnitRunner.class)
+public class DrmLogServiceTest {
+
+    @Mock
+    private RpmDrmLogEntityRepository rpmDrmLogEntityRepository;
+
+    @InjectMocks
+    private DrmLogService drmLogService;
+
+    @Before
+    public void setup() {
+        // Any setup code if needed
+    }
+
+    @Test
+    public void testLogUserDetails() {
+        // Given
+        UserDetailPayload userDetailPayload = new UserDetailPayload();
+        userDetailPayload.setEmail("test@example.com");
+        userDetailPayload.setGpin("12345");
+        userDetailPayload.setGridID("GRID123");
+        userDetailPayload.setDocumentLabel("Test Document");
+        userDetailPayload.setTotalElements(5);
+        userDetailPayload.setProfileIds("profile1,profile2");
+
+        // When
+        drmLogService.logUserDetails(userDetailPayload);
+
+        // Then
+        verify(rpmDrmLogEntityRepository).save(any(RpmDrmlogEntity.class));
+
+        // Assert specific attributes using ArgumentMatchers
+        verify(rpmDrmLogEntityRepository).save(argThat(savedEntity ->
+                "test@example.com".equals(savedEntity.getEmail()) &&
+                "12345".equals(savedEntity.getGpin()) &&
+                "GRID123".equals(savedEntity.getGridId()) &&
+                "Test Document".equals(savedEntity.getDocumentLabel()) &&
+                5 == savedEntity.getRecordCount() &&
+                "profile1,profile2".equals(savedEntity.getProfileIds())
+        ));
+        // You might need to adjust assertions based on your actual implementation
+    }
+
+    @Test
+    public void testLogUserDetailsWithNullPayload() {
+        // Given
+        UserDetailPayload userDetailPayload = null;
+
+        // When
+        drmLogService.logUserDetails(userDetailPayload);
+
+        // Then
+        verify(rpmDrmLogEntityRepository, never()).save(any(RpmDrmlogEntity.class));
+    }
+}
+
+
+    private String email;
+
+    // Constructors, getters, and setters
+}
