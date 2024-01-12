@@ -1,0 +1,49 @@
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.test.context.junit4.SpringRunner;
+
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class SourceListSearchRowlapperTest {
+
+    private ResultSet resultSet;
+
+    @Before
+    public void setUp() throws SQLException {
+        // Create a mock ResultSet and set up its behavior as per your needs
+        resultSet = mock(ResultSet.class);
+        when(resultSet.getInt("SL_ID")).thenReturn(1);
+        when(resultSet.getString("SourceListTitle")).thenReturn("Test Title");
+        // ... set up other mock behaviors for the remaining fields
+    }
+
+    @Test
+    public void testMapRow() throws SQLException {
+        // Given
+        SourceListSearchRowlapper rowMapper = new SourceListSearchRowlapper();
+        // Create a new instance of SourceListSearchResult to compare with the result of mapRow
+        SourceListSearchResult expected = new SourceListSearchResult();
+        expected.setSourceListId(1);
+        expected.setSourceListTitle("Test Title");
+        // ... set up other expected values
+
+        // When
+        SourceListSearchResult actual = rowMapper.mapRow(resultSet, 0);
+
+        // Then
+        assertEquals(expected, actual);
+    }
+
+    // Add more test cases as needed for different scenarios
+}
