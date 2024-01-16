@@ -1,0 +1,74 @@
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+// ... (other imports)
+
+@RunWith(MockitoJUnitRunner.class)
+public class WorkbenchControllerTest {
+
+    @InjectMocks
+    private WorkbenchController workbenchController;
+
+    @Mock
+    private ExcelUtil excelUtil;
+
+    @Test
+    public void generateExcel_Success() {
+        // Arrange
+        List<Map<String, Object>> testData = createTestData();
+        String expectedExcelData = "mockedExcelData";
+
+        when(excelUtil.generateExcel(testData)).thenReturn(expectedExcelData);
+
+        // Act
+        ResponseEntity<String> response = workbenchController.generateExcel(testData);
+
+        // Assert
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                response.getHeaders().getContentType().toString());
+        assertEquals(expectedExcelData, response.getBody());
+
+        // Verify that ExcelUtil.generateExcel was called with the correct argument
+        verify(excelUtil, times(1)).generateExcel(testData);
+    }
+
+    @Test
+    public void generateExcel_Failure() {
+        // Arrange
+        List<Map<String, Object>> testData = createTestData();
+        String errorMessage = "Error generating Excel file";
+
+        when(excelUtil.generateExcel(testData)).thenThrow(new ExcelGenerationException(errorMessage));
+
+        // Act
+        ResponseEntity<String> response = workbenchController.generateExcel(testData);
+
+        // Assert
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertEquals(errorMessage, response.getBody());
+
+        // Verify that ExcelUtil.generateExcel was called with the correct argument
+        verify(excelUtil, times(1)).generateExcel(testData);
+    }
+
+    private List<Map<String, Object>> createTestData() {
+        List<Map<String, Object>> testData = new ArrayList<>();
+
+        Map<String, Object> row1 = new HashMap<>();
+        row1.put("Name", "John");
+        row1.put("Age", 25);
+        testData.add(row1);
+
+        Map<String, Object> row2 = new HashMap<>();
+        row2.put("Name", "Jane");
+        row2.put("Age", 30);
+        testData.add(row2);
+
+        // Add more rows if needed
+
+        return testData;
+    }
+}
