@@ -2,16 +2,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import java.io.BufferedReader;
+import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.HashMap;
+import java.io.BufferedReader;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import java.util.HashMap;
 
 class SQLQueryReaderTest {
 
@@ -25,64 +22,59 @@ class SQLQueryReaderTest {
     private BufferedReader bufferedReader;
 
     @BeforeEach
-    void setUp() {
+    void setup() {
         MockitoAnnotations.openMocks(this);
     }
 
     @Test
     void testGetSqlQuery() throws IOException {
-        // Mock the necessary dependencies
+        // Mocking
         when(classLoader.getResourceAsStream(ClassConstants.GRID_QUERY_FILE)).thenReturn(inputStream);
-        when(new BufferedReader(any())).thenReturn(bufferedReader);
+        when(bufferedReader.readLine()).thenReturn("SELECT * FROM table1;", "-- Key1", "SELECT * FROM table2;", null);
 
-        // Mock the content of the input stream
-        when(bufferedReader.readLine())
-                .thenReturn("SELECT * FROM table1 --query1")
-                .thenReturn("WHERE condition1;")
-                .thenReturn("SELECT column FROM table2 --query2")
-                .thenReturn("WHERE condition2;")
-                .thenReturn(null); // End of file
-
-        // Call the method to be tested
+        // Test
         Map<String, String> sqlQueries = SQLQueryReader.getSqlQuery();
 
-        // Verify the results
+        // Verification
+        verify(classLoader).getResourceAsStream(ClassConstants.GRID_QUERY_FILE);
+        verify(inputStream).close();
+        verify(bufferedReader, times(4)).readLine();
+
+        // Assertions
         assertNotNull(sqlQueries);
         assertEquals(2, sqlQueries.size());
-        assertEquals("SELECT * FROM table1 WHERE condition1;", sqlQueries.get("query1"));
-        assertEquals("SELECT column FROM table2 WHERE condition2;", sqlQueries.get("query2"));
-
-        // Verify interactions with mocks
-        verify(classLoader, times(1)).getResourceAsStream(ClassConstants.GRID_QUERY_FILE);
-        verify(bufferedReader, times(4)).readLine(); // 4 lines in the mocked file
-        verify(bufferedReader, times(1)).close(); // Ensure the BufferedReader is closed
+        assertEquals("SELECT * FROM table1;", sqlQueries.get(""));
+        assertEquals("SELECT * FROM table2;", sqlQueries.get("Key1"));
     }
 
     @Test
-    void testGetSqlQueryFileNotFound() throws IOException {
-        // Mock the case where the resource is not found
+    void testGetSqlQuery_ResourceNotFound() throws IOException {
+        // Mocking
         when(classLoader.getResourceAsStream(ClassConstants.GRID_QUERY_FILE)).thenReturn(null);
 
-        // Call the method to be tested and expect an exception
-        assertThrows(FileNotFoundException.class, SQLQueryReader::getSqlQuery);
+        // Test and Verification
+        FileNotFoundException exception = assertThrows(FileNotFoundException.class, () -> {
+            SQLQueryReader.getSqlQuery();
+        });
 
-        // Verify interactions with mocks
-        verify(classLoader, times(1)).getResourceAsStream(ClassConstants.GRID_QUERY_FILE);
-        verify(bufferedReader, never()).readLine(); // Ensure readLine is not called
+        assertEquals("Resource not found: grid_queries.sql", exception.getMessage());
+        verify(classLoader).getResourceAsStream(ClassConstants.GRID_QUERY_FILE);
     }
 
     @Test
-    void testGetSqlQueryIOException() throws IOException {
-        // Mock the case where an IOException occurs
+    void testGetSqlQuery_IOException() throws IOException {
+        // Mocking
         when(classLoader.getResourceAsStream(ClassConstants.GRID_QUERY_FILE)).thenReturn(inputStream);
-        when(new BufferedReader(any())).thenThrow(new IOException("Mocked IOException"));
+        when(bufferedReader.readLine()).thenThrow(new IOException("Test IOException"));
 
-        // Call the method to be tested and expect an exception
-        assertThrows(ExcelCreationException.class, SQLQueryReader::getSqlQuery);
+        // Test and Verification
+        ExcelCreationException exception = assertThrows(ExcelCreationException.class, () -> {
+            SQLQueryReader.getSqlQuery();
+        });
 
-        // Verify interactions with mocks
-        verify(classLoader, times(1)).getResourceAsStream(ClassConstants.GRID_QUERY_FILE);
-        verify(bufferedReader, times(1)).readLine(); // Ensure readLine is called once before the exception
-        verify(bufferedReader, times(1)).close(); // Ensure the BufferedReader is closed even if an exception occurs
+        assertEquals("Error occurred while reading SQL from file Test IOException", exception.getMessage());
+        verify(classLoader).getResourceAsStream(ClassConstants.GRID_QUERY_FILE);
+        verify(inputStream).close();
+        verify(bufferedReader).readLine();
     }
 }
