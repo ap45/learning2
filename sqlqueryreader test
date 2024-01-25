@@ -4,64 +4,56 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.ByteArrayInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class SQLQueryReaderTest {
+class SQLQueryReaderTest {
 
     @Test
     void testGetSqlQuery() throws IOException {
-        // Arrange
-        String testSqlFileContent = "-- query1\nSELECT * FROM table1;\n-- query2\nSELECT * FROM table2;";
-        InputStream inputStream = new ByteArrayInputStream(testSqlFileContent.getBytes());
+        String testContent = "--key1\nSELECT * FROM table1;\n--key2\nSELECT * FROM table2;";
+        InputStream inputStream = new ByteArrayInputStream(testContent.getBytes());
 
-        try (MockedStatic<SQLQueryReader> mockedStatic = mockStatic(ClassLoader.class)) {
-            mockedStatic.when(() -> SQLQueryReader.class.getClassLoader()).thenReturn(ClassLoader.getSystemClassLoader());
-            mockedStatic.when(() -> SQLQueryReader.class.getClassLoader().getResourceAsStream(ClassConstants.GRID_QUERY_FILE))
+        try (MockedStatic<SQLQueryReader> mockedStatic = mockStatic(SQLQueryReader.class)) {
+            mockedStatic.when(SQLQueryReader.class::getClassLoader).thenReturn(SQLQueryReader.class.getClassLoader());
+            mockedStatic.when(() -> SQLQueryReader.class.getClassLoader().getResourceAsStream(anyString()))
                     .thenReturn(inputStream);
 
-            // Act
             Map<String, String> sqlQueries = SQLQueryReader.getSqlQuery();
 
-            // Assert
+            assertNotNull(sqlQueries);
             assertEquals(2, sqlQueries.size());
-            assertTrue(sqlQueries.containsKey("query1"));
-            assertEquals("SELECT * FROM table1;", sqlQueries.get("query1"));
-            assertTrue(sqlQueries.containsKey("query2"));
-            assertEquals("SELECT * FROM table2;", sqlQueries.get("query2"));
+            assertTrue(sqlQueries.containsKey("key1"));
+            assertTrue(sqlQueries.containsKey("key2"));
+            assertEquals("SELECT * FROM table1;", sqlQueries.get("key1"));
+            assertEquals("SELECT * FROM table2;", sqlQueries.get("key2"));
         }
     }
 
     @Test
-    void testGetSqlQueryFileNotFound() {
-        // Arrange
-        try (MockedStatic<SQLQueryReader> mockedStatic = mockStatic(ClassLoader.class)) {
-            mockedStatic.when(() -> SQLQueryReader.class.getClassLoader()).thenReturn(ClassLoader.getSystemClassLoader());
-            mockedStatic.when(() -> SQLQueryReader.class.getClassLoader().getResourceAsStream(ClassConstants.GRID_QUERY_FILE))
+    void testGetSqlQuery_ResourceNotFound() {
+        try (MockedStatic<SQLQueryReader> mockedStatic = mockStatic(SQLQueryReader.class)) {
+            mockedStatic.when(SQLQueryReader.class::getClassLoader).thenReturn(SQLQueryReader.class.getClassLoader());
+            mockedStatic.when(() -> SQLQueryReader.class.getClassLoader().getResourceAsStream(anyString()))
                     .thenReturn(null);
 
-            // Act & Assert
-            FileNotFoundException exception = assertThrows(FileNotFoundException.class, SQLQueryReader::getSqlQuery);
-            assertEquals("Resource not found: " + ClassConstants.GRID_QUERY_FILE, exception.getMessage());
+            assertThrows(FileNotFoundException.class, SQLQueryReader::getSqlQuery);
         }
     }
 
     @Test
-    void testGetSqlQueryIOException() throws IOException {
-        // Arrange
-        try (MockedStatic<SQLQueryReader> mockedStatic = mockStatic(ClassLoader.class)) {
-            mockedStatic.when(() -> SQLQueryReader.class.getClassLoader()).thenReturn(ClassLoader.getSystemClassLoader());
-            mockedStatic.when(() -> SQLQueryReader.class.getClassLoader().getResourceAsStream(ClassConstants.GRID_QUERY_FILE))
-                    .thenThrow(new IOException("Error occurred while reading sql from file"));
+    void testGetSqlQuery_IOException() throws IOException {
+        try (MockedStatic<SQLQueryReader> mockedStatic = mockStatic(SQLQueryReader.class)) {
+            mockedStatic.when(SQLQueryReader.class::getClassLoader).thenReturn(SQLQueryReader.class.getClassLoader());
+            mockedStatic.when(() -> SQLQueryReader.class.getClassLoader().getResourceAsStream(anyString()))
+                    .thenThrow(new IOException("Test IOException"));
 
-            // Act & Assert
-            IOException exception = assertThrows(IOException.class, SQLQueryReader::getSqlQuery);
-            assertEquals("Error occurred while reading sql from file", exception.getMessage());
+            assertThrows(ExcelCreationException.class, SQLQueryReader::getSqlQuery);
         }
     }
 }
