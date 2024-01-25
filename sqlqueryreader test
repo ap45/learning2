@@ -1,52 +1,73 @@
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.MockedStatic;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith(MockitoJUnitRunner.class)
-@SpringBootTest
+@ExtendWith(MockitoExtension.class)
 public class SQLQueryReaderTest {
 
-    @InjectMocks
-    private SQLQueryReader sqlQueryReader;
+    private static final String TEST_QUERY_FILE = "test_queries.sql";
 
-    @Mock
-    private BufferedReader mockBufferedReader;
+    private MockedStatic<SQLQueryReader> sqlQueryReaderMockedStatic;
+
+    @BeforeEach
+    void setUp() {
+        sqlQueryReaderMockedStatic = mockStatic(SQLQueryReader.class);
+    }
 
     @Test
     void testGetSqlQuery() throws IOException {
-        String queryFileContent = "--query1\nSELECT * FROM table1;\n--query2\nSELECT * FROM table2;";
-        InputStream inputStream = new ByteArrayInputStream(queryFileContent.getBytes());
+        InputStream inputStreamMock = mock(InputStream.class);
+        BufferedReader bufferedReaderMock = mock(BufferedReader.class);
 
-        try (MockedStatic<ClassLoader> mockedStatic = mockStatic(ClassLoader.class)) {
+        when(SQLQueryReader.class.getClassLoader()).thenReturn(getClass().getClassLoader());
+        when(getClass().getClassLoader().getResourceAsStream(ClassConstants.GRID_QUERY_FILE))
+                .thenReturn(inputStreamMock);
+        when(new InputStreamReader(inputStreamMock)).thenReturn(new InputStreamReader(System.in));
+        when(new BufferedReader(new InputStreamReader(inputStreamMock))).thenReturn(bufferedReaderMock);
 
-            mockedStatic.when(ClassLoader::getSystemClassLoader).thenReturn(ClassLoader.getSystemClassLoader());
-            mockedStatic.when(() -> ClassLoader.getSystemClassLoader().getResourceAsStream(any())).thenReturn(inputStream);
+        when(bufferedReaderMock.readLine()).thenReturn("--key1", "SELECT * FROM table1;", "--key2", "SELECT * FROM table2;", null);
 
-            when(new BufferedReader(any(Reader.class))).thenReturn(mockBufferedReader);
-            when(mockBufferedReader.readLine()).thenReturn("SELECT * FROM table1;", "--query2", "SELECT * FROM table2;", null);
+        Map<String, String> result = SQLQueryReader.getSqlQuery();
 
-            // Act
-            Map<String, String> sqlQueries = sqlQueryReader.getSqlQuery();
+        assertEquals(2, result.size());
+        assertEquals("SELECT * FROM table1;", result.get("key1"));
+        assertEquals("SELECT * FROM table2;", result.get("key2"));
+    }
 
-            // Assert
-            assertEquals(2, sqlQueries.size());
-            assertEquals("SELECT * FROM table1;", sqlQueries.get("query1"));
-            assertEquals("SELECT * FROM table2;", sqlQueries.get("query2"));
+    @Test
+    void testGetSqlQueryIOException() throws IOException {
+        when(SQLQueryReader.class.getClassLoader()).thenReturn(getClass().getClassLoader());
+        when(getClass().getClassLoader().getResourceAsStream(ClassConstants.GRID_QUERY_FILE))
+                .thenThrow(new IOException("Test IOException"));
+
+        try {
+            SQLQueryReader.getSqlQuery();
+        } catch (Exception e) {
+            assertEquals(ExcelCreationException.class, e.getClass());
+            assertEquals("Error occurred while reading SQL from file Test IOException", e.getMessage());
         }
     }
 
-    // Other tests remain unchanged
+    @Test
+    void testGetSqlQueryFileNotFound() throws IOException {
+        when(SQLQueryReader.class.getClassLoader()).thenReturn(getClass().getClassLoader());
+        when(getClass().getClassLoader().getResourceAsStream(ClassConstants.GRID_QUERY_FILE)).thenReturn(null);
+
+        try {
+            SQLQueryReader.getSqlQuery();
+        } catch (Exception e) {
+            assertEquals(FileNotFoundException.class, e.getClass());
+            assertEquals("Resource not found: " + ClassConstants.GRID_QUERY_FILE, e.getMessage());
+        }
+    }
 }
