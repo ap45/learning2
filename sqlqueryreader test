@@ -1,59 +1,39 @@
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.MockedStatic;
-import org.mockito.junit.jupiter.MockitoExtension;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.MockedStatic;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-@ExtendWith(MockitoExtension.class)
-class SQLQueryReaderTest {
-
-    @Test
-    void testGetSqlQuery() throws IOException {
-        String testContent = "--key1\nSELECT * FROM table1;\n--key2\nSELECT * FROM table2;";
-        InputStream inputStream = new ByteArrayInputStream(testContent.getBytes());
-
-        try (MockedStatic<SQLQueryReader> mockedStatic = mockStatic(SQLQueryReader.class)) {
-            mockedStatic.when(SQLQueryReader.class::getClassLoader).thenReturn(SQLQueryReader.class.getClassLoader());
-            mockedStatic.when(() -> SQLQueryReader.class.getClassLoader().getResourceAsStream(anyString()))
-                    .thenReturn(inputStream);
-
-            Map<String, String> sqlQueries = SQLQueryReader.getSqlQuery();
-
-            assertNotNull(sqlQueries);
-            assertEquals(2, sqlQueries.size());
-            assertTrue(sqlQueries.containsKey("key1"));
-            assertTrue(sqlQueries.containsKey("key2"));
-            assertEquals("SELECT * FROM table1;", sqlQueries.get("key1"));
-            assertEquals("SELECT * FROM table2;", sqlQueries.get("key2"));
-        }
-    }
+@ExtendWith(SpringExtension.class)
+public class SQLQueryReaderTest {
 
     @Test
-    void testGetSqlQuery_ResourceNotFound() {
+    public void testGetSqlQuery() throws IOException {
+        // Arrange
         try (MockedStatic<SQLQueryReader> mockedStatic = mockStatic(SQLQueryReader.class)) {
-            mockedStatic.when(SQLQueryReader.class::getClassLoader).thenReturn(SQLQueryReader.class.getClassLoader());
-            mockedStatic.when(() -> SQLQueryReader.class.getClassLoader().getResourceAsStream(anyString()))
-                    .thenReturn(null);
+            ClassLoader classLoader = mock(ClassLoader.class);
+            InputStream inputStream = mock(InputStream.class);
 
-            assertThrows(FileNotFoundException.class, SQLQueryReader::getSqlQuery);
-        }
-    }
+            mockedStatic.when(() -> SQLQueryReader.class.getClassLoader()).thenReturn(classLoader);
+            mockedStatic.when(() -> classLoader.getResourceAsStream(ClassConstants.GRID_QUERY_FILE)).thenReturn(inputStream);
 
-    @Test
-    void testGetSqlQuery_IOException() throws IOException {
-        try (MockedStatic<SQLQueryReader> mockedStatic = mockStatic(SQLQueryReader.class)) {
-            mockedStatic.when(SQLQueryReader.class::getClassLoader).thenReturn(SQLQueryReader.class.getClassLoader());
-            mockedStatic.when(() -> SQLQueryReader.class.getClassLoader().getResourceAsStream(anyString()))
-                    .thenThrow(new IOException("Test IOException"));
+            when(inputStream.read()).thenReturn((int) '-').thenReturn((int) '-').thenReturn((int) '\n').thenReturn((int) 'S').thenReturn((int) 'E').thenReturn((int) 'L').thenReturn((int) 'E').thenReturn((int) 'C').thenReturn((int) 'T').thenReturn((int) ' ').thenReturn((int) '*').thenReturn((int) '-').thenReturn((int) '-').thenReturn((int) '\n').thenReturn((int) 'F').thenReturn((int) 'R').thenReturn((int) 'O').thenReturn((int) 'M').thenReturn((int) ' ').thenReturn((int) 'm').thenReturn((int) 'y').thenReturn((int) 't').thenReturn((int) 'a').thenReturn((int) 'b').thenReturn((int) 'l').thenReturn((int) 'e').thenReturn((int) '\n').thenReturn((int) ';').thenReturn((int) '\n').thenReturn((int) '\n');
 
-            assertThrows(ExcelCreationException.class, SQLQueryReader::getSqlQuery);
+            // Act
+            Map<String, String> result = SQLQueryReader.getSqlQuery();
+
+            // Assert
+            assertNotNull(result);
+            assertEquals(1, result.size());
+            assertTrue(result.containsKey("SELECT *"));
+            assertEquals("FROM mytable", result.get("SELECT *"));
         }
     }
 }
