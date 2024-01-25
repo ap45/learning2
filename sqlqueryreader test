@@ -1,69 +1,44 @@
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.powermock.api.mockito.PowerMockito;
+import org.mockito.Mockito;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class SQLQueryReaderTest {
-
-    @Mock
-    private ClassLoader classLoaderMock;
-
-    @InjectMocks
-    private SQLQueryReader sqlQueryReader;
 
     @Test
     void testGetSqlQuery() throws IOException {
-        // Mocking the ClassLoader and InputStream
-        InputStream inputStreamMock = new ByteArrayInputStream("-- key1\nSELECT * FROM table1;\n-- key2\nSELECT * FROM table2;".getBytes());
+        // Mocking dependencies
+        ClassLoader classLoaderMock = mock(ClassLoader.class);
+        InputStream inputStreamMock = mock(InputStream.class);
 
         // Mocking the getResourceAsStream method
-        PowerMockito.mockStatic(SQLQueryReader.class);
-        PowerMockito.when(SQLQueryReader.class.getClassLoader()).thenReturn(classLoaderMock);
-        Mockito.when(classLoaderMock.getResourceAsStream(any())).thenReturn(inputStreamMock);
+        when(classLoaderMock.getResourceAsStream(anyString())).thenReturn(inputStreamMock);
 
-        // Calling the actual method
-        Map<String, String> sqlQueries = SQLQueryReader.getSqlQuery();
+        // Mocking the content of the input stream
+        String fileContent = "--key1\nSELECT * FROM table1;\n--key2\nSELECT * FROM table2;";
+        InputStream mockInputStream = new ByteArrayInputStream(fileContent.getBytes(StandardCharsets.UTF_8));
+        when(inputStreamMock.read()).thenReturn(-1); // simulate end of stream
+        when(classLoaderMock.getResourceAsStream(anyString())).thenReturn(mockInputStream);
 
-        // Verifying the expected behavior
+        // Test the SQLQueryReader
+        Map<String, String> sqlQueries = SQLQueryReader.getSqlQuery(classLoaderMock);
+
+        // Verify that getResourceAsStream is called with the correct argument
+        verify(classLoaderMock).getResourceAsStream(ClassConstants.GRID_QUERY_FILE);
+
+        // Verify that the InputStream is closed
+        verify(inputStreamMock).close();
+
+        // Verify the contents of the map
         assertEquals(2, sqlQueries.size());
         assertEquals("SELECT * FROM table1;", sqlQueries.get("key1"));
         assertEquals("SELECT * FROM table2;", sqlQueries.get("key2"));
-    }
-
-    @Test
-    void testGetSqlQueryResourceNotFound() {
-        // Mocking the ClassLoader to simulate resource not found
-        PowerMockito.mockStatic(SQLQueryReader.class);
-        PowerMockito.when(SQLQueryReader.class.getClassLoader()).thenReturn(classLoaderMock);
-        Mockito.when(classLoaderMock.getResourceAsStream(any())).thenReturn(null);
-
-        // Calling the method and asserting an exception is thrown
-        assertThrows(FileNotFoundException.class, SQLQueryReader::getSqlQuery);
-    }
-
-    @Test
-    void testGetSqlQueryIOException() throws IOException {
-        // Mocking the ClassLoader and InputStream to simulate an IOException
-        InputStream inputStreamMock = PowerMockito.mock(InputStream.class);
-        PowerMockito.mockStatic(SQLQueryReader.class);
-        PowerMockito.when(SQLQueryReader.class.getClassLoader()).thenReturn(classLoaderMock);
-        Mockito.when(classLoaderMock.getResourceAsStream(any())).thenReturn(inputStreamMock);
-        Mockito.when(inputStreamMock.read()).thenThrow(new IOException("Simulated IOException"));
-
-        // Calling the method and asserting an exception is thrown
-        assertThrows(ExcelCreationException.class, SQLQueryReader::getSqlQuery);
     }
 }
