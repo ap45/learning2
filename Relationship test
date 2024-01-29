@@ -1,0 +1,87 @@
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.util.CollectionUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class YourClassTest {
+
+    @Mock
+    private ProfileRepository profileRepository;
+
+    @InjectMocks
+    private YourClass yourClass;
+
+    @Test
+    void testGetRelationshipDetailsWhenEmptyRpmProfile() {
+        // Arrange
+        Optional<RpmProfileTEntity> emptyOptional = Optional.empty();
+        ProfileDetail profileDetail = mock(ProfileDetail.class);
+
+        // Act
+        yourClass.getRelationshipDetails(emptyOptional, profileDetail);
+
+        // Assert
+        verify(profileDetail, never()).setProfileRelationship(any());
+    }
+
+    @Test
+    void testGetRelationshipDetailsWithAssociationDetails() {
+        // Arrange
+        RpmProfileTEntity rpmProfileTEntity = mock(RpmProfileTEntity.class);
+        List<RpmAssociationDetEntity> associationDetEntities = new ArrayList<>();
+        associationDetEntities.add(mock(RpmAssociationDetEntity.class));
+
+        when(rpmProfileTEntity.getRpmAssociationDetEntities()).thenReturn(associationDetEntities);
+        ProfileDetail profileDetail = mock(ProfileDetail.class);
+
+        // Act
+        yourClass.getRelationshipDetails(Optional.of(rpmProfileTEntity), profileDetail);
+
+        // Assert
+        verify(profileDetail).setProfileRelationship(anyList());
+    }
+
+    @Test
+    void testGetRelationshipDetailsWithAssociatedProfile() {
+        // Arrange
+        RpmProfileTEntity rpmProfileTEntity = mock(RpmProfileTEntity.class);
+        RpmAssociationDetEntity associationDetEntity = mock(RpmAssociationDetEntity.class);
+        when(rpmProfileTEntity.getRpmAssociationDetEntities()).thenReturn(List.of(associationDetEntity));
+        ProfileDetail profileDetail = mock(ProfileDetail.class);
+
+        when(profileRepository.findByPrValueId(any())).thenReturn(Optional.of(new YourAssociatedProfileEntity()));
+
+        // Act
+        yourClass.getRelationshipDetails(Optional.of(rpmProfileTEntity), profileDetail);
+
+        // Assert
+        verify(profileDetail).setProfileRelationship(anyList());
+    }
+
+    @Test
+    void testGetRelationshipDetailsWithNoAssociatedProfile() {
+        // Arrange
+        RpmProfileTEntity rpmProfileTEntity = mock(RpmProfileTEntity.class);
+        RpmAssociationDetEntity associationDetEntity = mock(RpmAssociationDetEntity.class);
+        when(rpmProfileTEntity.getRpmAssociationDetEntities()).thenReturn(List.of(associationDetEntity));
+        ProfileDetail profileDetail = mock(ProfileDetail.class);
+
+        when(profileRepository.findByPrValueId(any())).thenReturn(Optional.empty());
+
+        // Act
+        yourClass.getRelationshipDetails(Optional.of(rpmProfileTEntity), profileDetail);
+
+        // Assert
+        verify(profileDetail).setProfileRelationship(anyList());
+    }
+}
