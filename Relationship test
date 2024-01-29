@@ -85,3 +85,77 @@ class YourClassTest {
         verify(profileDetail).setProfileRelationship(anyList());
     }
 }
+/////////////////////////////////////////
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+@ExtendWith(MockitoExtension.class)
+public class YourTestClass {
+
+    @Mock
+    private Profilerepository profileRepository;
+
+    @InjectMocks
+    private YourClassUnderTest yourClassUnderTest;
+
+    @Test
+    void testGetRelationshipDetailsWithEmptyRpmProfileTEntity() {
+        // Mock data
+        Optional<RpmProfileTEntity> rpmProfileTEntity = Optional.empty();
+        ProfileDetail profileDetail = new ProfileDetail();
+
+        // Invoke the method
+        yourClassUnderTest.getRelationshipDetails(rpmProfileTEntity, profileDetail);
+
+        // Assert
+        assertTrue(profileDetail.getProfileRelationship().isEmpty());
+    }
+
+    @Test
+    void testGetRelationshipDetailsWithNonEmptyAssociationDetEntities() {
+        // Mock data
+        RpmProfileTEntity rpmProfileTEntity = mock(RpmProfileTEntity.class);
+        RpmAssociationDetEntity associationDetEntity = mock(RpmAssociationDetEntity.class);
+        when(rpmProfileTEntity.getRpmAssociationDetEntities()).thenReturn(Arrays.asList(associationDetEntity));
+
+        // Mock behavior
+        when(profileRepository.findByPrValueId(any())).thenReturn(Optional.of(new YourPrEntity()));
+
+        // Invoke the method
+        ProfileDetail profileDetail = new ProfileDetail();
+        yourClassUnderTest.getRelationshipDetails(Optional.of(rpmProfileTEntity), profileDetail);
+
+        // Assert
+        assertFalse(profileDetail.getProfileRelationship().isEmpty());
+        assertEquals(1, profileDetail.getProfileRelationship().size());
+        assertNotNull(profileDetail.getProfileRelationship().get(0).getRelationship());
+        assertNotNull(profileDetail.getProfileRelationship().get(0).getAssociatedProfileId());
+    }
+
+    @Test
+    void testGetRelationshipDetailsWithEmptyAssociationDetEntities() {
+        // Mock data
+        RpmProfileTEntity rpmProfileTEntity = mock(RpmProfileTEntity.class);
+        when(rpmProfileTEntity.getRpmAssociationDetEntities()).thenReturn(Collections.emptyList());
+
+        // Invoke the method
+        ProfileDetail profileDetail = new ProfileDetail();
+        yourClassUnderTest.getRelationshipDetails(Optional.of(rpmProfileTEntity), profileDetail);
+
+        // Assert
+        assertTrue(profileDetail.getProfileRelationship().isEmpty());
+    }
+
+    // Add more test cases as needed to cover different scenarios and lines
+}
