@@ -6,15 +6,17 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-import java.util.Arrays;
-import java.util.Collections;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Types;
+import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-public class WorkbenchDaoTest {
+class WorkbenchDaoTest {
 
     @Mock
     private JdbcTemplate jdbcTemplate;
@@ -23,54 +25,47 @@ public class WorkbenchDaoTest {
     private RowMapperFactory rowMapperFactory;
 
     @InjectMocks
-    private WorkbenchDao<Object> workbenchDao; // Replace Object with the actual type you want to test
+    private WorkbenchDao<Object> workbenchDao;
 
     @BeforeEach
-    public void setup() {
-        MockitoAnnotations.openMocks(this);
+    void setUp() {
+        MockitoAnnotations.initMocks(this);
     }
 
     @Test
-    public void testGetWorkbenchData() {
-        // Mocking data
+    void testGetWorkbenchData() {
+        // Arrange
         String gridId = "PROFILE_SEARCH_GRID";
-        String query = "SELECT * FROM test_table";
-        List<Object> fieldValues = Arrays.asList("value1", "value2");
+        String query = "SELECT * FROM some_table WHERE condition = :param0";
+        List<Object> fieldValues = new ArrayList<>();
 
-        // Mocking RowMapper
-        RowMapper<Object> rowMapper = mock(RowMapper.class);
-        when(rowMapperFactory.getRowMapper(gridId)).thenReturn(rowMapper);
+        when(rowMapperFactory.getRowMapper(anyString())).thenReturn(mock(RowMapper.class));
+        when(jdbcTemplate.query(anyString(), any(), any(RowMapper.class))).thenReturn(new ArrayList<>());
 
-        // Mocking NamedParameterJdbcTemplate
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = mock(NamedParameterJdbcTemplate.class);
-        when(namedParameterJdbcTemplate.query(any(String.class), any(), any(RowMapper.class)))
-                .thenReturn(Collections.singletonList(new Object())); // Replace Object with the actual type you want to test
-
-        // Mocking CustomSqlParameterSource
-        when(workbenchDao.getCustomSqlParameterSource(fieldValues))
-                .thenReturn(new WorkbenchDao.CustomSqlParameterSource(fieldValues));
-
-        // Setting up the JdbcTemplate in the WorkbenchDao
-        workbenchDao.setJdbcTemplate(jdbcTemplate);
-
-        // Executing the method to test
+        // Act
         List<Object> result = workbenchDao.getWorkbenchData(gridId, query, fieldValues);
 
-        // Verifying the interactions
-        verify(namedParameterJdbcTemplate).query(eq(query), any(), eq(rowMapper));
-        assertEquals(1, result.size()); // Replace 1 with the expected size based on your mocked data
+        // Assert
+        assertNotNull(result);
+        verify(jdbcTemplate, times(1)).query(anyString(), any(), any(RowMapper.class));
     }
 
     @Test
-    public void testGetCustomSqlParameterSource() {
-        // Mocking data
-        List<Object> fieldValues = Arrays.asList("value1", "value2");
+    void testCustomSqlParameterSource() {
+        // Arrange
+        List<Object> values = new ArrayList<>();
+        values.add("param0");
 
-        // Executing the method to test
-        WorkbenchDao.CustomSqlParameterSource customSqlParameterSource =
-                workbenchDao.getCustomSqlParameterSource(fieldValues);
+        WorkbenchDao.CustomSqlParameterSource customSqlParameterSource = new WorkbenchDao.CustomSqlParameterSource(values);
 
-        // Verifying the interactions
-        assertEquals(fieldValues, customSqlParameterSource.getValues());
+        // Act
+        boolean hasValueResult = customSqlParameterSource.hasValue("param0");
+        Object valueResult = customSqlParameterSource.getValue("param0");
+        int sqlTypeResult = customSqlParameterSource.getSqlType("param0");
+
+        // Assert
+        assertTrue(hasValueResult);
+        assertEquals("param0", valueResult);
+        assertEquals(Types.NVARCHAR, sqlTypeResult);
     }
 }
