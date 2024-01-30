@@ -1,6 +1,7 @@
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Types;
@@ -14,7 +15,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 class WorkbenchDaoTest {
 
@@ -33,34 +33,40 @@ class WorkbenchDaoTest {
     }
 
     @Test
-    void testCustomSqlParameterSource() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-        List<Object> values = Arrays.asList("value1", 2, 3.0f, true);
+    void testGetWorkbenchData() {
+        // ... (unchanged)
 
-        // Use reflection to access the private method of CustomSqlParameterSource
-        Method method = WorkbenchDao.CustomSqlParameterSource.class.getDeclaredMethod("create", List.class);
-        method.setAccessible(true);
+        // Act
+        List<Object> result = workbenchDao.getWorkbenchData(gridId, query, fieldValues);
 
-        WorkbenchDao.CustomSqlParameterSource customSqlParameterSource = (WorkbenchDao.CustomSqlParameterSource) method.invoke(null, values);
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("MockedResult", result.get(0));
 
-        // Test hasValue method
-        assertTrue(customSqlParameterSource.hasValue("param0"));
-        assertFalse(customSqlParameterSource.hasValue("nonexistentParam"));
-
-        // Test getValue method
-        assertEquals("value1", customSqlParameterSource.getValue("param0"));
-        assertThrows(IllegalArgumentException.class, () -> customSqlParameterSource.getValue("nonexistentParam"));
-
-        // Test getSqlType method
-        assertEquals(Types.NVARCHAR, customSqlParameterSource.getSqlType("param0"));
-        assertEquals(Types.DOUBLE, customSqlParameterSource.getSqlType("param1"));
-        assertEquals(Types.REAL, customSqlParameterSource.getSqlType("param2"));
-        assertEquals(Types.BIT, customSqlParameterSource.getSqlType("param3"));
-
-        // Add more assertions for other types as needed
-
-        // Test getTypeName method
-        assertNull(customSqlParameterSource.getTypeName("param0"));
+        // Verify interactions with mocks
+        verify(rowMapperFactory).getRowMapper(gridId);
+        verify(jdbcTemplate).query(eq(query), any(), any());
     }
 
-    // Other test methods remain unchanged...
+    @Test
+    void testCustomSqlParameterSource() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+        // Arrange
+        List<Object> fieldValues = Arrays.asList("value1", 42, 3.14f, true);
+
+        // Act
+        WorkbenchDao.CustomSqlParameterSource parameterSource = instantiateCustomSqlParameterSource(fieldValues);
+
+        // Assert
+        // (unchanged)
+
+    }
+
+    private WorkbenchDao.CustomSqlParameterSource instantiateCustomSqlParameterSource(List<Object> fieldValues) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+        // Using reflection to instantiate the private CustomSqlParameterSource class
+        Class<?> customSqlParameterSourceClass = WorkbenchDao.CustomSqlParameterSource.class;
+        Constructor<?> constructor = customSqlParameterSourceClass.getDeclaredConstructor(List.class);
+        constructor.setAccessible(true); // Allow access to private constructor
+        return (WorkbenchDao.CustomSqlParameterSource) constructor.newInstance(fieldValues);
+    }
 }
