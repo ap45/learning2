@@ -1,0 +1,94 @@
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+public class WorkbenchServiceImplTest {
+
+    @InjectMocks
+    private WorkbenchServiceImpl<Object> workbenchService;
+
+    @Mock
+    private WorkbenchDao<Object> workbenchDao;
+
+    @Mock
+    private QueryGeneratorFactory queryGeneratorFactory;
+
+    @Mock
+    private ColumnSelectorFactory columnSelectorFactory;
+
+    @Test
+    public void testGetWorkbenchData() {
+        // Mocking dependencies
+        WorkbenchRequest workbenchRequest = new WorkbenchRequest();
+        QueryGenerator queryGenerator = mock(QueryGenerator.class);
+        ColumnSelector columnSelector = mock(ColumnSelector.class);
+        List<Object> fieldValues = new ArrayList<>();
+        List<Object> resultList = new ArrayList<>();
+        Result mockResult = new Result();
+        mockResult.setTotalRowCount(10L);
+        resultList.add(mockResult);
+
+        when(queryGeneratorFactory.getQueryGenerator(anyString())).thenReturn(queryGenerator);
+        when(columnSelectorFactory.getColumnSelecor(anyString())).thenReturn(columnSelector);
+        when(queryGenerator.buildQuery()).thenReturn("mockedQuery");
+        when(workbenchDao.getWorkbenchData(anyString(), anyString(), anyList())).thenReturn(resultList);
+
+        // Invoking the actual method
+        WorkbenchResponse<Object> result = workbenchService.getWorkbenchData(workbenchRequest);
+
+        // Verifying interactions and assertions
+        verify(queryGeneratorFactory).getQueryGenerator(anyString());
+        verify(columnSelectorFactory).getColumnSelecor(anyString());
+        verify(queryGenerator).setColumnSelector(columnSelector);
+        verify(queryGenerator).setWorkbenchRequest(workbenchRequest);
+        verify(workbenchDao).getWorkbenchData(anyString(), eq("mockedQuery"), eq(fieldValues));
+
+        // Assertions
+        assertNotNull(result);
+        assertEquals(resultList, result.getData());
+        assertEquals(10L, result.getTotalElements());
+        assertEquals(1, result.getTotalPages());
+    }
+
+    @Test
+    public void testGetWorkbenchDataEmptyResultList() {
+        // Mocking dependencies
+        WorkbenchRequest workbenchRequest = new WorkbenchRequest();
+        QueryGenerator queryGenerator = mock(QueryGenerator.class);
+        ColumnSelector columnSelector = mock(ColumnSelector.class);
+        List<Object> fieldValues = new ArrayList<>();
+        List<Object> emptyResultList = new ArrayList<>();
+
+        when(queryGeneratorFactory.getQueryGenerator(anyString())).thenReturn(queryGenerator);
+        when(columnSelectorFactory.getColumnSelecor(anyString())).thenReturn(columnSelector);
+        when(queryGenerator.buildQuery()).thenReturn("mockedQuery");
+        when(workbenchDao.getWorkbenchData(anyString(), anyString(), anyList())).thenReturn(emptyResultList);
+
+        // Invoking the actual method
+        WorkbenchResponse<Object> result = workbenchService.getWorkbenchData(workbenchRequest);
+
+        // Verifying interactions and assertions
+        verify(queryGeneratorFactory).getQueryGenerator(anyString());
+        verify(columnSelectorFactory).getColumnSelecor(anyString());
+        verify(queryGenerator).setColumnSelector(columnSelector);
+        verify(queryGenerator).setWorkbenchRequest(workbenchRequest);
+        verify(workbenchDao).getWorkbenchData(anyString(), eq("mockedQuery"), eq(fieldValues));
+
+        // Assertions
+        assertNotNull(result);
+        assertNotNull(result.getData());
+        assertTrue(result.getData().isEmpty());
+        assertEquals(0L, result.getTotalElements());
+        assertEquals(0, result.getTotalPages());
+    }
+}
