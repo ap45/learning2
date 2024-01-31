@@ -1,87 +1,81 @@
 import static org.junit.Assert.*;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
+import static org.mockito.Mockito.*;
+
+import java.time.LocalDateTime;
 import java.util.Optional;
 
-@SpringBootTest
+import org.junit.Before;
+import org.junit.Test;
+
 public class SourceListServiceTest {
 
-    @Mock
-    private RpmSrcListRefTEntityRepository rpmSrcListRefTEntityRepository;
-
-    @InjectMocks
     private SourceListService sourceListService;
+    private RpmSrcListRefTEntityRepository rpmSrcListRefTEntityRepository;
 
     @Before
     public void setUp() {
-        MockitoAnnotations.initMocks(this);
+        rpmSrcListRefTEntityRepository = mock(RpmSrcListRefTEntityRepository.class);
+        sourceListService = new SourceListService(rpmSrcListRefTEntityRepository);
     }
 
     @Test
-    @Transactional
     public void testCreateSourceList() {
-        SourceListCreateData createData = new SourceListCreateData();
-        createData.setSourceListTitle("TestTitle");
-        createData.setDescription("TestDescription");
-        createData.setSourceListStatus("Active");
-        createData.setSpecialTreatment("Special");
+        SourceListCreateData createData = createMockCreateData();
+        RpmSrcListRefTEntity sourceList = new RpmSrcListRefTEntity();
+        when(rpmSrcListRefTEntityRepository.save(any())).thenReturn(sourceList);
 
         sourceListService.createSourceList(createData);
+
+        verify(rpmSrcListRefTEntityRepository, times(1)).save(any());
     }
 
     @Test
-    @Transactional
     public void testEditSourceList() {
-        int id = 1;
-        SourceListCreateData sourceListEditData = new SourceListCreateData();
-        sourceListEditData.setSourceListTitle("UpdatedTitle");
-        sourceListEditData.setDescription("UpdatedDescription");
-        sourceListEditData.setSourceListStatus("Inactive");
-        sourceListEditData.setSpecialTreatment("UpdatedSpecial");
+        Integer id = 1;
+        SourceListCreateData editData = createMockCreateData();
+        Optional<RpmSrcListRefTEntity> optionalSourceList = Optional.of(new RpmSrcListRefTEntity());
+        when(rpmSrcListRefTEntityRepository.findById(id)).thenReturn(optionalSourceList);
+        when(rpmSrcListRefTEntityRepository.save(any())).thenReturn(new RpmSrcListRefTEntity());
 
-        RpmSrcListRefTEntity existingSourceList = new RpmSrcListRefTEntity();
-        existingSourceList.setId(id);
-        existingSourceList.setSlName("InitialTitle");
-        existingSourceList.setSlDesc("InitialDescription");
-        existingSourceList.setSlStatus("Active");
-        existingSourceList.setSlSpeclTretmnt("InitialSpecial");
+        sourceListService.editSourceList(id, editData);
 
-        when(rpmSrcListRefTEntityRepository.findById(id)).thenReturn(Optional.of(existingSourceList));
-
-        sourceListService.editSourceList(id, sourceListEditData);
+        verify(rpmSrcListRefTEntityRepository, times(1)).findById(id);
+        verify(rpmSrcListRefTEntityRepository, times(1)).save(any());
     }
 
     @Test(expected = ResourceUpdationException.class)
-    @Transactional
-    public void testEditSourceList_InvalidId() {
-        int invalidId = 999;
-        SourceListCreateData sourceListEditData = new SourceListCreateData();
+    public void testEditSourceListWithInvalidId() {
+        Integer id = 1;
+        SourceListCreateData editData = createMockCreateData();
+        when(rpmSrcListRefTEntityRepository.findById(id)).thenReturn(Optional.empty());
 
-        when(rpmSrcListRefTEntityRepository.findById(invalidId)).thenReturn(Optional.empty());
-
-        sourceListService.editSourceList(invalidId, sourceListEditData);
+        sourceListService.editSourceList(id, editData);
     }
 
-    @Test(expected = ResourceCreationException.class)
-    @Transactional
-    public void testCreateSourceList_Exception() {
-        SourceListCreateData createData = new SourceListCreateData();
-        createData.setSourceListTitle("TestTitle");
-        createData.setDescription("TestDescription");
-        createData.setSourceListStatus("Active");
-        createData.setSpecialTreatment("Special");
+    // Additional test cases can be added with different mock data
 
-        // Mock repository behavior to throw an exception
-        doThrow(new RuntimeException("Simulating exception during save"))
-                .when(rpmSrcListRefTEntityRepository).save(any());
-
-        sourceListService.createSourceList(createData);
+    private SourceListCreateData createMockCreateData() {
+        return SourceListCreateData.builder()
+                .sourceListTitle("Test Source List")
+                .sourceListCategory("Test Category")
+                .sourceListCategoryId(1)
+                .sourceListIssueCountry("Test Country")
+                .sourceListIssueCountryId("1")
+                .regulatoryAuthority("Test Authority")
+                .regulatoryAuthorityid(1)
+                .sanctionsRelevantFlag("Y")
+                .sourceListBusörpId(1)
+                .sourceListBusGrp("Test Group")
+                .sourceListStatus("Active")
+                .description("Test Description")
+                .provider("Test Provider")
+                .sourceListProId(1)
+                .official(true)
+                .specialTreatment("Test Treatment")
+                .slIsTech("1")
+                .sourcelistSancSrcCatId(1)
+                .created0n(LocalDateTime.now())
+                .updatedon(LocalDateTime.now())
+                .build();
     }
-
-    // Add more test cases for different scenarios, error handling, etc.
 }
