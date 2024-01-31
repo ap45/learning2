@@ -1,174 +1,87 @@
-@RestController
-@RequestMapping("/api/sourcelist")
-public class SourceListController {
+import static org.junit.Assert.*;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.Optional;
 
-    @Autowired
+@SpringBootTest
+public class SourceListServiceTest {
+
+    @Mock
+    private RpmSrcListRefTEntityRepository rpmSrcListRefTEntityRepository;
+
+    @InjectMocks
     private SourceListService sourceListService;
 
-    @PutMapping("/{id}")
-    public ResponseEntity<String> editSourceList(@PathVariable Long id, @RequestBody SourceListCreateData sourceListCreateData) {
-        try {
-            sourceListService.editSourceList(id, sourceListCreateData);
-            return ResponseEntity.ok("SourceListRef updated successfully.");
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating SourceListRef: " + e.getMessage());
-        }
+    @Before
+    public void setUp() {
+        MockitoAnnotations.initMocks(this);
     }
-}
 
-
-
-@Service
-public class SourceListService {
-
-    @Autowired
-    private SourceListRefRepository sourceListRefRepository;
-
-    @Autowired
-    private SourceListCategoryRepository categoryRepository;
-
-    @Autowired
-    private SourceListRegAuthRepository regAuthRepository;
-
-    @Autowired
-    private SourceListBusGrpRepository busGrpRepository;
-
+    @Test
     @Transactional
-    public void editSourceList(Long id, SourceListCreateData sourceListCreateData) {
-        Optional<SourceListRef> optionalSourceListRef = sourceListRefRepository.findById(id);
+    public void testCreateSourceList() {
+        SourceListCreateData createData = new SourceListCreateData();
+        createData.setSourceListTitle("TestTitle");
+        createData.setDescription("TestDescription");
+        createData.setSourceListStatus("Active");
+        createData.setSpecialTreatment("Special");
 
-        if (optionalSourceListRef.isPresent()) {
-            SourceListRef sourceListRef = optionalSourceListRef.get();
-
-            // Update SourceListRef properties from SourceListCreateData
-            sourceListRef.setName(sourceListCreateData.getName());
-            sourceListRef.setDescription(sourceListCreateData.getDescription());
-            sourceListRef.setStatus(sourceListCreateData.getStatus());
-
-            // Set dynamically modifiedOn as java.sql.Date
-            java.sql.Date now = new java.sql.Date(new java.util.Date().getTime());
-            sourceListRef.setModifiedOn(now);
-
-            // Set category attributes if provided
-            if (sourceListCreateData.getCategoryId() != null) {
-                sourceListRef.setCategoryId(sourceListCreateData.getCategoryId());
-                SourceListCategory category = categoryRepository.findById(sourceListCreateData.getCategoryId()).orElse(null);
-                if (category != null) {
-                    sourceListRef.setCategoryName(category.getName());
-                }
-            }
-
-            // Set regAuth attributes if provided
-            if (sourceListCreateData.getRegAuthId() != null) {
-                sourceListRef.setRegAuthId(sourceListCreateData.getRegAuthId());
-                SourceListRegAuth regAuth = regAuthRepository.findById(sourceListCreateData.getRegAuthId()).orElse(null);
-                if (regAuth != null) {
-                    sourceListRef.setRegAuthName(regAuth.getName());
-                }
-            }
-
-            // Set busGrp attributes if provided
-            if (sourceListCreateData.getBusGrpId() != null) {
-                sourceListRef.setBusGrpId(sourceListCreateData.getBusGrpId());
-                SourceListBusGrp busGrp = busGrpRepository.findById(sourceListCreateData.getBusGrpId()).orElse(null);
-                if (busGrp != null) {
-                    sourceListRef.setBusGrpName(busGrp.getName());
-                }
-            }
-
-            sourceListRefRepository.save(sourceListRef);
-        } else {
-            throw new IllegalArgumentException("SourceListRef with ID " + id + " not found.");
-        }
+        sourceListService.createSourceList(createData);
     }
-}
 
-
-
-
-
->//////////////////)///////// new logic ///////////
-@Service
-public class SourceListService {
-
-    @Autowired
-    private SourceListRefRepository sourceListRefRepository;
-
-    @Autowired
-    private SourceListCategoryRepository categoryRepository;
-
-    @Autowired
-    private SourceListRegAuthRepository regAuthRepository;
-
-    @Autowired
-    private SourceListBusGrpRepository busGrpRepository;
-
+    @Test
     @Transactional
-    public void editSourceList(Long id, SourceListCreateData sourceListCreateData) {
-        Optional<SourceListRef> optionalSourceListRef = sourceListRefRepository.findById(id);
+    public void testEditSourceList() {
+        int id = 1;
+        SourceListCreateData sourceListEditData = new SourceListCreateData();
+        sourceListEditData.setSourceListTitle("UpdatedTitle");
+        sourceListEditData.setDescription("UpdatedDescription");
+        sourceListEditData.setSourceListStatus("Inactive");
+        sourceListEditData.setSpecialTreatment("UpdatedSpecial");
 
-        if (optionalSourceListRef.isPresent()) {
-            SourceListRef sourceListRef = optionalSourceListRef.get();
+        RpmSrcListRefTEntity existingSourceList = new RpmSrcListRefTEntity();
+        existingSourceList.setId(id);
+        existingSourceList.setSlName("InitialTitle");
+        existingSourceList.setSlDesc("InitialDescription");
+        existingSourceList.setSlStatus("Active");
+        existingSourceList.setSlSpeclTretmnt("InitialSpecial");
 
-            // Update SourceListRef properties from SourceListCreateData
-            updateSourceListRefAttributes(sourceListRef, sourceListCreateData);
+        when(rpmSrcListRefTEntityRepository.findById(id)).thenReturn(Optional.of(existingSourceList));
 
-            // Set dynamically modifiedOn as java.sql.Date
-            java.sql.Date now = new java.sql.Date(new java.util.Date().getTime());
-            sourceListRef.setModifiedOn(now);
-
-            sourceListRefRepository.save(sourceListRef);
-        } else {
-            throw new IllegalArgumentException("SourceListRef with ID " + id + " not found.");
-        }
+        sourceListService.editSourceList(id, sourceListEditData);
     }
 
+    @Test(expected = ResourceUpdationException.class)
     @Transactional
-    public SourceListRef createSourceList(SourceListCreateData sourceListCreateData) {
-        SourceListRef sourceListRef = new SourceListRef();
+    public void testEditSourceList_InvalidId() {
+        int invalidId = 999;
+        SourceListCreateData sourceListEditData = new SourceListCreateData();
 
-        // Set SourceListRef properties from SourceListCreateData
-        updateSourceListRefAttributes(sourceListRef, sourceListCreateData);
+        when(rpmSrcListRefTEntityRepository.findById(invalidId)).thenReturn(Optional.empty());
 
-        // Set dynamically createdOn and modifiedOn as java.sql.Date
-        java.sql.Date now = new java.sql.Date(new java.util.Date().getTime());
-        sourceListRef.setCreatedOn(now);
-        sourceListRef.setModifiedOn(now);
-
-        sourceListRefRepository.save(sourceListRef);
-        return sourceListRef;
+        sourceListService.editSourceList(invalidId, sourceListEditData);
     }
 
-    private void updateSourceListRefAttributes(SourceListRef sourceListRef, SourceListCreateData sourceListCreateData) {
-        sourceListRef.setName(sourceListCreateData.getName());
-        sourceListRef.setDescription(sourceListCreateData.getDescription());
-        sourceListRef.setStatus(sourceListCreateData.getStatus());
+    @Test(expected = ResourceCreationException.class)
+    @Transactional
+    public void testCreateSourceList_Exception() {
+        SourceListCreateData createData = new SourceListCreateData();
+        createData.setSourceListTitle("TestTitle");
+        createData.setDescription("TestDescription");
+        createData.setSourceListStatus("Active");
+        createData.setSpecialTreatment("Special");
 
-        // Set category attributes if provided
-        if (sourceListCreateData.getCategoryId() != null) {
-            sourceListRef.setCategoryId(sourceListCreateData.getCategoryId());
-            SourceListCategory category = categoryRepository.findById(sourceListCreateData.getCategoryId()).orElse(null);
-            if (category != null) {
-                sourceListRef.setCategoryName(category.getName());
-            }
-        }
+        // Mock repository behavior to throw an exception
+        doThrow(new RuntimeException("Simulating exception during save"))
+                .when(rpmSrcListRefTEntityRepository).save(any());
 
-        // Set regAuth attributes if provided
-        if (sourceListCreateData.getRegAuthId() != null) {
-            sourceListRef.setRegAuthId(sourceListCreateData.getRegAuthId());
-            SourceListRegAuth regAuth = regAuthRepository.findById(sourceListCreateData.getRegAuthId()).orElse(null);
-            if (regAuth != null) {
-                sourceListRef.setRegAuthName(regAuth.getName());
-            }
-        }
-
-        // Set busGrp attributes if provided
-        if (sourceListCreateData.getBusGrpId() != null) {
-            sourceListRef.setBusGrpId(sourceListCreateData.getBusGrpId());
-            SourceListBusGrp busGrp = busGrpRepository.findById(sourceListCreateData.getBusGrpId()).orElse(null);
-            if (busGrp != null) {
-                sourceListRef.setBusGrpName(busGrp.getName());
-            }
-        }
+        sourceListService.createSourceList(createData);
     }
+
+    // Add more test cases for different scenarios, error handling, etc.
 }
