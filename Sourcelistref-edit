@@ -27,12 +27,15 @@ public class SourceListServiceTest {
         sourceListService.createSourceList(createData);
 
         verify(rpmSrcListRefTEntityRepository, times(1)).save(any());
+
+        assertNotNull(sourceList.getSlCreatedOn());
+        assertEquals("1", sourceList.getSlisTec());
     }
 
     @Test
     public void testEditSourceList() {
         Integer id = 1;
-        SourceListCreateData editData = createMockCreateData();
+        SourceListCreateData editData = createMockEditData();
         Optional<RpmSrcListRefTEntity> optionalSourceList = Optional.of(new RpmSrcListRefTEntity());
         when(rpmSrcListRefTEntityRepository.findById(id)).thenReturn(optionalSourceList);
         when(rpmSrcListRefTEntityRepository.save(any())).thenReturn(new RpmSrcListRefTEntity());
@@ -41,18 +44,27 @@ public class SourceListServiceTest {
 
         verify(rpmSrcListRefTEntityRepository, times(1)).findById(id);
         verify(rpmSrcListRefTEntityRepository, times(1)).save(any());
+
+        assertNotNull(optionalSourceList.get().getSlModifiedOn());
+        assertEquals("2", optionalSourceList.get().getSlSpeclTretmnt());
     }
 
     @Test(expected = ResourceUpdationException.class)
     public void testEditSourceListWithInvalidId() {
         Integer id = 1;
-        SourceListCreateData editData = createMockCreateData();
+        SourceListCreateData editData = createMockEditData();
         when(rpmSrcListRefTEntityRepository.findById(id)).thenReturn(Optional.empty());
 
         sourceListService.editSourceList(id, editData);
     }
 
-    // Additional test cases can be added with different mock data
+    @Test(expected = ResourceCreationException.class)
+    public void testCreateSourceListWithException() {
+        SourceListCreateData createData = createMockCreateData();
+        when(rpmSrcListRefTEntityRepository.save(any())).thenThrow(new RuntimeException("Test Exception"));
+
+        sourceListService.createSourceList(createData);
+    }
 
     private SourceListCreateData createMockCreateData() {
         return SourceListCreateData.builder()
@@ -75,6 +87,31 @@ public class SourceListServiceTest {
                 .slIsTech("1")
                 .sourcelistSancSrcCatId(1)
                 .created0n(LocalDateTime.now())
+                .updatedon(LocalDateTime.now())
+                .build();
+    }
+
+    private SourceListCreateData createMockEditData() {
+        return SourceListCreateData.builder()
+                .sourceListTitle("Updated Source List")
+                .sourceListCategory("Updated Category")
+                .sourceListCategoryId(2)
+                .sourceListIssueCountry("Updated Country")
+                .sourceListIssueCountryId("2")
+                .regulatoryAuthority("Updated Authority")
+                .regulatoryAuthorityid(2)
+                .sanctionsRelevantFlag("N")
+                .sourceListBusörpId(2)
+                .sourceListBusGrp("Updated Group")
+                .sourceListStatus("Inactive")
+                .description("Updated Description")
+                .provider("Updated Provider")
+                .sourceListProId(2)
+                .official(false)
+                .specialTreatment("Updated Treatment")
+                .slIsTech("2")
+                .sourcelistSancSrcCatId(2)
+                .created0n(LocalDateTime.now().minusDays(1))
                 .updatedon(LocalDateTime.now())
                 .build();
     }
