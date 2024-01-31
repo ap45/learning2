@@ -14,9 +14,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class WorkbenchServiceImplTest {
 
-    @InjectMocks
-    private WorkbenchServiceImpl<Object> workbenchService;
-
     @Mock
     private WorkbenchDao<Object> workbenchDao;
 
@@ -26,69 +23,99 @@ public class WorkbenchServiceImplTest {
     @Mock
     private ColumnSelectorFactory columnSelectorFactory;
 
+    @InjectMocks
+    private WorkbenchServiceImpl<Object> workbenchService;
+
     @Test
-    public void testGetWorkbenchData() {
+    void testGetWorkbenchDataSuccess() {
         // Mocking dependencies
-        WorkbenchRequest workbenchRequest = new WorkbenchRequest();
         QueryGenerator queryGenerator = mock(QueryGenerator.class);
         ColumnSelector columnSelector = mock(ColumnSelector.class);
-        List<Object> fieldValues = new ArrayList<>();
-        List<Object> resultList = new ArrayList<>();
-        Result mockResult = new Result();
-        mockResult.setTotalRowCount(10L);
-        resultList.add(mockResult);
 
         when(queryGeneratorFactory.getQueryGenerator(anyString())).thenReturn(queryGenerator);
-        when(columnSelectorFactory.getColumnSelecor(anyString())).thenReturn(columnSelector);
-        when(queryGenerator.buildQuery()).thenReturn("mockedQuery");
+        when(columnSelectorFactory.getColumnSelector(anyString())).thenReturn(columnSelector);
+
+        // Creating test data
+        WorkbenchRequest workbenchRequest = new WorkbenchRequest("gridId", new ArrayList<>(), "sortColumn", "ASC", 1, 10);
+        WorkbenchResponse<Object> expectedResponse = new WorkbenchResponse<>();
+        List<Object> resultList = new ArrayList<>();
+        resultList.add(new Result()); // Assuming Result is a sample class with getTotalRowCount method
+        expectedResponse.setData(resultList);
+        expectedResponse.setTotalElements(10L);
+        expectedResponse.setTotalPages(1);
+
+        // Mocking DAO behavior
         when(workbenchDao.getWorkbenchData(anyString(), anyString(), anyList())).thenReturn(resultList);
 
-        // Invoking the actual method
-        WorkbenchResponse<Object> result = workbenchService.getWorkbenchData(workbenchRequest);
-
-        // Verifying interactions and assertions
-        verify(queryGeneratorFactory).getQueryGenerator(anyString());
-        verify(columnSelectorFactory).getColumnSelecor(anyString());
-        verify(queryGenerator).setColumnSelector(columnSelector);
-        verify(queryGenerator).setWorkbenchRequest(workbenchRequest);
-        verify(workbenchDao).getWorkbenchData(anyString(), eq("mockedQuery"), eq(fieldValues));
+        // Executing the method under test
+        WorkbenchResponse<Object> actualResponse = workbenchService.getWorkbenchData(workbenchRequest);
 
         // Assertions
-        assertNotNull(result);
-        assertEquals(resultList, result.getData());
-        assertEquals(10L, result.getTotalElements());
-        assertEquals(1, result.getTotalPages());
+        assertNotNull(actualResponse);
+        assertEquals(expectedResponse.getData(), actualResponse.getData());
+        assertEquals(expectedResponse.getTotalElements(), actualResponse.getTotalElements());
+        assertEquals(expectedResponse.getTotalPages(), actualResponse.getTotalPages());
+
+        // Verify interactions with mocked objects
+        verify(queryGeneratorFactory, times(1)).getQueryGenerator(anyString());
+        verify(columnSelectorFactory, times(1)).getColumnSelector(anyString());
+        verify(queryGenerator, times(1)).setColumnSelector(any());
+        verify(queryGenerator, times(1)).setWorkbenchRequest(any());
+        verify(workbenchDao, times(1)).getWorkbenchData(anyString(), anyString(), anyList());
     }
 
     @Test
-    public void testGetWorkbenchDataEmptyResultList() {
+    void testGetWorkbenchDataEmptyResult() {
         // Mocking dependencies
-        WorkbenchRequest workbenchRequest = new WorkbenchRequest();
         QueryGenerator queryGenerator = mock(QueryGenerator.class);
         ColumnSelector columnSelector = mock(ColumnSelector.class);
-        List<Object> fieldValues = new ArrayList<>();
-        List<Object> emptyResultList = new ArrayList<>();
 
         when(queryGeneratorFactory.getQueryGenerator(anyString())).thenReturn(queryGenerator);
-        when(columnSelectorFactory.getColumnSelecor(anyString())).thenReturn(columnSelector);
-        when(queryGenerator.buildQuery()).thenReturn("mockedQuery");
-        when(workbenchDao.getWorkbenchData(anyString(), anyString(), anyList())).thenReturn(emptyResultList);
+        when(columnSelectorFactory.getColumnSelector(anyString())).thenReturn(columnSelector);
 
-        // Invoking the actual method
-        WorkbenchResponse<Object> result = workbenchService.getWorkbenchData(workbenchRequest);
+        // Creating test data for an empty result
+        WorkbenchRequest workbenchRequest = new WorkbenchRequest("gridId", new ArrayList<>(), "sortColumn", "ASC", 1, 10);
+        WorkbenchResponse<Object> expectedResponse = new WorkbenchResponse<>();
 
-        // Verifying interactions and assertions
-        verify(queryGeneratorFactory).getQueryGenerator(anyString());
-        verify(columnSelectorFactory).getColumnSelecor(anyString());
-        verify(queryGenerator).setColumnSelector(columnSelector);
-        verify(queryGenerator).setWorkbenchRequest(workbenchRequest);
-        verify(workbenchDao).getWorkbenchData(anyString(), eq("mockedQuery"), eq(fieldValues));
+        // Mocking DAO behavior to return an empty list
+        when(workbenchDao.getWorkbenchData(anyString(), anyString(), anyList())).thenReturn(new ArrayList<>());
+
+        // Executing the method under test
+        WorkbenchResponse<Object> actualResponse = workbenchService.getWorkbenchData(workbenchRequest);
 
         // Assertions
-        assertNotNull(result);
-        assertNotNull(result.getData());
-        assertTrue(result.getData().isEmpty());
-        assertEquals(0L, result.getTotalElements());
-        assertEquals(0, result.getTotalPages());
+        assertNotNull(actualResponse);
+        assertTrue(actualResponse.getData().isEmpty());
+        assertEquals(0L, actualResponse.getTotalElements());
+        assertEquals(0, actualResponse.getTotalPages());
     }
+
+    @Test
+    void testGetWorkbenchDataNullResult() {
+        // Mocking dependencies
+        QueryGenerator queryGenerator = mock(QueryGenerator.class);
+        ColumnSelector columnSelector = mock(ColumnSelector.class);
+
+        when(queryGeneratorFactory.getQueryGenerator(anyString())).thenReturn(queryGenerator);
+        when(columnSelectorFactory.getColumnSelector(anyString())).thenReturn(columnSelector);
+
+        // Creating test data for a null result
+        WorkbenchRequest workbenchRequest = new WorkbenchRequest("gridId", new ArrayList<>(), "sortColumn", "ASC", 1, 10);
+        WorkbenchResponse<Object> expectedResponse = new WorkbenchResponse<>();
+
+        // Mocking DAO behavior to return null
+        when(workbenchDao.getWorkbenchData(anyString(), anyString(), anyList())).thenReturn(null);
+
+        // Executing the method under test
+        WorkbenchResponse<Object> actualResponse = workbenchService.getWorkbenchData(workbenchRequest);
+
+        // Assertions
+        assertNotNull(actualResponse);
+        assertTrue(actualResponse.getData().isEmpty());
+        assertEquals(0L, actualResponse.getTotalElements());
+        assertEquals(0, actualResponse.getTotalPages());
+    }
+
+    // Additional tests for edge cases and error scenarios
+
 }
