@@ -1,0 +1,55 @@
+
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { exportSearchAction, exportExcelAction } from 'your/actions';
+
+const YourComponent = () => {
+  const dispatch = useDispatch();
+  const { data: exportSearchReporting, flag: exportSearchReportingFlag } = useSelector(state => state.exportExcel);
+
+  const exportExcel = () => {
+    const excelpayload = {
+      data: payloadSearchObject.data,
+      req: {
+        page: 1,
+        pagesize: 50,
+        sortColumn: '', // Fill this with your sorting column
+        sortDirection: '', // Fill this with your sorting direction
+        forExportFlag: true
+      },
+    };
+
+    // Dispatch exportSearchAction
+    dispatch(exportSearchAction(excelpayload))
+      .then(response => {
+        // Check if response is successful and has data
+        if (response && response.flag && response.data) {
+          const exportData = response.data.tableData;
+          dispatch(exportExcelAction(exportData));
+        } else {
+          // Handle case where response is not as expected
+          console.error('exportSearchAction returned unexpected response:', response);
+        }
+      })
+      .catch(error => {
+        // Handle any errors from exportSearchAction
+        console.error('Error while dispatching exportSearchAction:', error);
+      });
+  };
+
+  useEffect(() => {
+    // Trigger exportExcel when exportSearchReportingFlag changes to true
+    if (exportSearchReportingFlag) {
+      exportExcel();
+    }
+  }, [exportSearchReportingFlag]);
+
+  return (
+    <div>
+      {/* Your component JSX */}
+      <button onClick={exportExcel}>Export to Excel</button>
+    </div>
+  );
+};
+
+export default YourComponent;
