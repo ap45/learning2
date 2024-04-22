@@ -1,0 +1,156 @@
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+
+public class ExcelUtil {
+
+    public static ResponseEntity<String> generateExcel(ExcelPayload payload) {
+        List<Map<String, Object>> data = payload.getData();
+        String exportedBy = payload.getUser();
+        String exportedAt = LocalDateTime.now().toString();
+
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.createSheet("Sheet1");
+
+            // Create cell style for headers and "Exported By" and "Exported At"
+            CellStyle headerStyle = workbook.createCellStyle();
+            headerStyle.setFillForegroundColor(IndexedColors.YELLOW.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            // Add Exported By and Exported At in the first two rows with yellow background
+            Row exportedByRow = sheet.createRow(0);
+            exportedByRow.createCell(0).setCellValue("Exported By:");
+            exportedByRow.getCell(0).setCellStyle(headerStyle);
+            exportedByRow.createCell(1).setCellValue(exportedBy);
+            exportedByRow.getCell(1).setCellStyle(headerStyle);
+
+            Row exportedAtRow = sheet.createRow(1);
+            exportedAtRow.createCell(0).setCellValue("Exported At:");
+            exportedAtRow.getCell(0).setCellStyle(headerStyle);
+            exportedAtRow.createCell(1).setCellValue(exportedAt);
+            exportedAtRow.getCell(1).setCellStyle(headerStyle);
+
+            // Leave third row empty
+            sheet.createRow(2);
+
+            // Extract headers from the data
+            if (!data.isEmpty()) {
+                Map<String, Object> firstRow = data.get(0);
+                String[] headers = firstRow.keySet().toArray(new String[0]);
+
+                // Convert headers to camel case
+                String[] camelCaseHeaders = new String[headers.length];
+                for (int i = 0; i < headers.length; i++) {
+                    camelCaseHeaders[i] = toCamelCase(headers[i]);
+                }
+
+                // Create header row with yellow background
+                Row headerRow = sheet.createRow(3);
+                for (int i = 0; i < camelCaseHeaders.length; i++) {
+                    Cell headerCell = headerRow.createCell(i);
+                    headerCell.setCellValue(camelCaseHeaders[i]);
+                    headerCell.setCellStyle(headerStyle);
+                }
+
+                // Populate data rows
+                for (int rowIndex = 0; rowIndex < data.size(); rowIndex++) {
+                    Row dataRow = sheet.createRow(rowIndex + 4);
+                    Map<String, Object> rowData = data.get(rowIndex);
+
+                    int cellIndex = 0;
+                    for (String header : headers) {
+                        Cell cell = dataRow.createCell(cellIndex++);
+                        Object value = rowData.get(header);
+                        if (value != null) {
+                            cell.setCellValue(value.toString());
+                        }
+                    }
+                }
+            }
+
+            // Write workbook to byte array
+            workbook.write(outputStream);
+
+            String contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            byte[] excelBytes = outputStream.toByteArray();
+
+            return ResponseEntity.ok()
+                    .header("Content-Type", contentType)
+                    .body(java.util.Base64.getEncoder().encodeToString(excelBytes));
+
+        } catch (IOException e) {
+            return new ResponseEntity<>("Error generating Excel: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // Helper method to convert string to camel case
+    private static String toCamelCase(String s) {
+        String[] parts = s.split("_");
+        StringBuilder camelCaseString = new StringBuilder(parts[0]);
+        for (int i = 1; i < parts.length; i++) {
+            camelCaseString.append(Character.toUpperCase(parts[i].charAt(0)));
+            if (parts[i].length() > 1) {
+                camelCaseString.append(parts[i].substring(1));
+            }
+        }
+        return camelCaseString.toString();
+    }
+}
+
+
+////// Controller ///
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+
+@RestController
+public class ExcelController {
+
+    @PostMapping("/excel")
+    public ResponseEntity<String> generateExcel(@RequestBody ExcelPayload payload) {
+        try {
+            return ExcelUtil.generateExcel(payload);
+
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error generating Excel: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+}
+
+
+////Payload Model
+
+import java.util.List;
+import java.util.Map;
+
+public class ExcelPayload {
+    private List<Map<String, Object>> data;
+    private String user;
+
+    // Getters and Setters
+    public List<Map<String, Object>> getData() {
+        return data;
+    }
+
+    public void setData(List<Map<String, Object>> data) {
+        this.data = data;
+    }
+
+    public String getUser() {
+        return user;
+    }
+
+    public void setUser(String user) {
+        this.user = user;
+    }
+}
