@@ -1,74 +1,15 @@
-// Service Layer
-public class WorkbenchService {
+import java.sql.Timestamp;
 
-    public WorkbenchResponse<?> getWorkbenchData(WorkbenchRequest workbenchRequest) {
-        WorkbenchResponse<?> workbenchResponse = new WorkbenchResponse<>();
+public class CommonFieldSetter {
 
-        QueryGenerator queryGenerator = queryGeneratorFactory.getQueryGenerator(workbenchRequest.getGridID());
-        queryGenerator.setColumnSelector(columnSelectorFactory.getColumnSelector(workbenchRequest.getGridID()));
-        queryGenerator.setWorkbenchRequest(workbenchRequest);
-
-        List<Object> fieldValues = workbenchRequest.getSearchCriteriaList().stream()
-                .map(cri -> cri.getQueryValue())
-                .collect(Collectors.toList());
-
-        List<?> resultList = workbenchDao.getWorkbenchData(workbenchRequest.getGridID(), queryGenerator.buildQuery(), fieldValues);
-
-        if (resultList.isEmpty()) {
-            workbenchResponse.setData(resultList);
-
-            // Calculate totalElements from the first SearchResult in the resultList
-            long totalElements = 0;
-
-            // Determine the appropriate result class based on grid ID
-            Class<?> resultClass;
-            if (Requests.PROFILE_SEARCH_GRID.name().equals(workbenchRequest.getGridID())) {
-                resultClass = SearchResult.class;
-            } else if (Requests.SOURCE_LIST_GRID.name().equals(workbenchRequest.getGridID())) {
-                resultClass = SourceListSearchResult.class;
-            } else {
-                throw new IllegalArgumentException("Unsupported grid ID: " + workbenchRequest.getGridID());
-            }
-
-            if (!resultList.isEmpty() && resultClass.isInstance(resultList.get(0))) {
-                totalElements = ((SearchResult) resultList.get(0)).getTotalRowCount();
-            }
-
-            // Calculate totalPages based on pageSize
-            int pageSize = workbenchRequest.getPageSize();
-            int totalPages = (int) Math.ceil((double) totalElements / pageSize);
-            workbenchResponse.setTotalElements(totalElements);
-            workbenchResponse.setTotalPages(totalPages);
-
-            return workbenchResponse;
-        }
-
-        // Handle other cases or return appropriate response for non-empty resultList
-        // ...
-
-        return workbenchResponse;
-    }
-}
-
-// Controller Layer
-public class WorkbenchController {
-
-    public ResponseEntity<WorkbenchResponse<?>> getWorkbenchData(@RequestBody WorkbenchRequest workbenchRequest) {
-        Class<?> genericType = determineGenericTypes(workbenchRequest.getGridID());
-        WorkbenchService<?> workbenchService = workbenchServiceFactory.getService(genericType);
-
-        WorkbenchResponse<?> result = workbenchService.getWorkbenchData(workbenchRequest);
-
-        return ResponseEntity.ok(result);
-    }
-
-    private Class<?> determineGenericTypes(String gridId) {
-        if (Requests.PROFILE_SEARCH_GRID.name().equals(gridId)) {
-            return SearchResult.class;
-        } else if (Requests.SOURCE_LIST_GRID.name().equals(gridId)) {
-            return SourceListSearchResult.class;
-        }
-
-        throw new IllegalArgumentException("Unsupported grid ID: " + gridId);
+    public static void setCommonFields(HistoryCommonField commonFieldEntity) {
+        // Set the common fields
+        commonFieldEntity.setSrcout(Timestamp.valueOf("9999-01-01 00:00:00"));
+        commonFieldEntity.setStgout(Timestamp.valueOf("9999-01-01 00:00:00"));
+        commonFieldEntity.setStgSoftdel(/* Set your value here */);
+        commonFieldEntity.setStgDel(/* Set your value here */);
+        commonFieldEntity.setSrcDel(/* Set your value here */);
+        commonFieldEntity.setStgCr(new Timestamp(System.currentTimeMillis()));
+        commonFieldEntity.setSrcer(new Timestamp(System.currentTimeMillis()));
     }
 }
