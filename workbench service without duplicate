@@ -1,12 +1,12 @@
 public WorkbenchResponse<T> getWorkbenchData(WorkbenchRequest workbenchRequest) {
-    return processWorkbenchData(workbenchRequest, queryGenerator -> queryGenerator.buildQuery());
+    return processWorkbenchData(workbenchRequest, true);
 }
 
 public WorkbenchResponse<T> getWorkbenchDataCount(WorkbenchRequest workbenchRequest) {
-    return processWorkbenchData(workbenchRequest, queryGenerator -> queryGenerator.buildQueryforCount());
+    return processWorkbenchData(workbenchRequest, false);
 }
 
-private WorkbenchResponse<T> processWorkbenchData(WorkbenchRequest workbenchRequest, Function<QueryGenerator, String> queryBuilder) {
+private WorkbenchResponse<T> processWorkbenchData(WorkbenchRequest workbenchRequest, boolean isDataQuery) {
     WorkbenchResponse<T> workbenchResponse = new WorkbenchResponse<>();
     QueryGenerator queryGenerator = setupQueryGenerator(workbenchRequest);
 
@@ -17,7 +17,7 @@ private WorkbenchResponse<T> processWorkbenchData(WorkbenchRequest workbenchRequ
 
     List<T> resultList = workbenchDao.getWorkbenchData(
             workbenchRequest.getGridID(),
-            queryBuilder.apply(queryGenerator),
+            isDataQuery ? queryGenerator.buildQuery() : queryGenerator.buildQueryforCount(),
             fieldValues
     );
 
