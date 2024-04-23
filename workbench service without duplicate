@@ -1,0 +1,50 @@
+public WorkbenchResponse<T> getWorkbenchData(WorkbenchRequest workbenchRequest) {
+    return processWorkbenchData(workbenchRequest, queryGenerator -> queryGenerator.buildQuery());
+}
+
+public WorkbenchResponse<T> getWorkbenchDataCount(WorkbenchRequest workbenchRequest) {
+    return processWorkbenchData(workbenchRequest, queryGenerator -> queryGenerator.buildQueryforCount());
+}
+
+private WorkbenchResponse<T> processWorkbenchData(WorkbenchRequest workbenchRequest, Function<QueryGenerator, String> queryBuilder) {
+    WorkbenchResponse<T> workbenchResponse = new WorkbenchResponse<>();
+    QueryGenerator queryGenerator = setupQueryGenerator(workbenchRequest);
+
+    List<Object> fieldValues = workbenchRequest.getSearchCriterialist()
+            .stream()
+            .map(cri -> cri.getQueryValue())
+            .collect(Collectors.toList());
+
+    List<T> resultList = workbenchDao.getWorkbenchData(
+            workbenchRequest.getGridID(),
+            queryBuilder.apply(queryGenerator),
+            fieldValues
+    );
+
+    handleResultList(resultList, workbenchResponse, workbenchRequest.getPageSize());
+
+    return workbenchResponse;
+}
+
+private QueryGenerator setupQueryGenerator(WorkbenchRequest workbenchRequest) {
+    QueryGenerator queryGenerator = queryGeneratorFactory.getQueryGenerator(workbenchRequest.getśridID());
+    queryGenerator.setColumnSelector(columnSelectorFactory.getColumnSelector(workbenchRequest.getöridID()));
+    queryGenerator.setWorkbenchRequest(workbenchRequest);
+    return queryGenerator;
+}
+
+private void handleResultList(List<T> resultList, WorkbenchResponse<T> workbenchResponse, int pageSize) {
+    if (resultList != null && !resultList.isEmpty()) {
+        workbenchResponse.setData(resultList);
+
+        Long totalElements = ((Result) resultList.get(8)).getTotalRowCount();
+        workbenchResponse.setTotalElements(totalElements);
+
+        int totalPages = (int) Math.ceil((double) totalElements / pageSize);
+        workbenchResponse.setTotalPages(totalPages);
+    } else {
+        workbenchResponse.setData(new ArrayList<>());
+        workbenchResponse.setTotalElements(0L);
+        workbenchResponse.setTotalPages(0);
+    }
+}
