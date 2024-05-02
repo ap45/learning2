@@ -1,0 +1,130 @@
+// PDFDocument.js
+import React from 'react';
+import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+
+const PDFDocument = ({ profileData }) => {
+  const generatePdf = () => {
+    return (
+      <Document>
+        <Page size="A4" style={styles.page}>
+          <View style={styles.section}>
+            <Text>Profile ID: {profileData.profileId}</Text>
+            <Text>Profile Type: {profileData.profileType}</Text>
+            <Text>Primary Name: {profileData.primaryName.firstName} {profileData.primaryName.lastName}</Text>
+            {/* Render other details as desired */}
+          </View>
+          <View style={styles.section}>
+            <Text>Profile Relationships:</Text>
+            {profileData.profileRelationship.map((relationship, index) => (
+              <View key={index} style={styles.tableRow}>
+                <Text>{relationship.relationship.rpmAssociationTypRefEntity.rtTypValue}: {relationship.associationId}</Text>
+              </View>
+            ))}
+          </View>
+          {/* Add other sections as desired */}
+        </Page>
+      </Document>
+    );
+  };
+
+  return (
+    <Document>
+      {generatePdf()}
+    </Document>
+  );
+};
+
+const styles = StyleSheet.create({
+  page: {
+    flexDirection: 'column',
+    margin: 10,
+  },
+  section: {
+    margin: 10,
+    padding: 10,
+    flexGrow: 1,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#000',
+    paddingBottom: 5,
+    marginBottom: 5,
+  },
+});
+
+export default PDFDocument;
+
+
+///////
+
+// ProfileDetails.js
+import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
+import { exportToDRM } from './redux/actions'; // Redux action to export to DRM
+import PDFDocument from './PDFDocument'; // Import the PDFDocument component
+
+const ProfileDetails = ({ profileData }) => {
+  const dispatch = useDispatch();
+  const [pdfBase64, setPdfBase64] = useState('');
+
+  const handleExportToPdf = () => {
+    const pdfBase64 = generatePdfBase64(profileData); // Generate PDF base64
+    setPdfBase64(pdfBase64);
+
+    // Dispatch Redux action to export to DRM
+    dispatch(exportToDRM({ pdfBase64, otherPayload: /* Add your other payload here */ }));
+  };
+
+  const generatePdfBase64 = (profileData) => {
+    // Generate PDF document and convert to base64
+    const pdfData = generatePdf(profileData);
+    return btoa(pdfData);
+  };
+
+  const generatePdf = (profileData) => {
+    return (
+      <PDFDocument profileData={profileData} />
+    );
+  };
+
+  return (
+    <div>
+      <button onClick={handleExportToPdf}>Export Details</button>
+    </div>
+  );
+};
+
+export default ProfileDetails;
+
+//////////////////////
+
+// redux/actions.js
+export const EXPORT_TO_DRM_SUCCESS = 'EXPORT_TO_DRM_SUCCESS';
+export const EXPORT_TO_DRM_FAILURE = 'EXPORT_TO_DRM_FAILURE';
+
+export const exportToDRM = (payload) => async (dispatch) => {
+  try {
+    // Simulate API call with setTimeout
+    setTimeout(() => {
+      const response = { bytestream: 'example_bytestream' }; // Example response
+
+      dispatch(exportToDRMSuccess(response));
+    }, 1000); // Simulating 1 second delay
+  } catch (error) {
+    dispatch(exportToDRMFailure(error.message));
+  }
+};
+
+export const exportToDRMSuccess = (data) => ({
+  type: EXPORT_TO_DRM_SUCCESS,
+  payload: data,
+});
+
+export const exportToDRMFailure = (error) => ({
+  type: EXPORT_TO_DRM_FAILURE,
+  payload: error,
+});
+
+//////
