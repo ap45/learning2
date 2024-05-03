@@ -289,18 +289,18 @@ export default ProfileDetails;
 
 
 
-
+///////////////////// new code
 
 import React, { useState } from 'react';
-import { PDFViewer } from '@react-pdf/renderer';
 import { Button } from 'antd'; // Assuming you are using Ant Design
 import ProfilePDF from './ProfilePDF';
+import { PDFDocument } from '@react-pdf/renderer';
 
 const ExportPDF = ({ profileData }) => {
   const [pdfBase64, setPdfBase64] = useState('');
 
-  const handleExportPDF = () => {
-    const pdfBlob = new Blob([<ProfilePDF profileData={profileData} />], { type: 'application/pdf' });
+  const generatePdfBase64 = async (profileData) => {
+    const pdfBlob = await PDFDocument.create(<ProfilePDF profileData={profileData} />).toBlob();
     const reader = new FileReader();
     reader.readAsDataURL(pdfBlob);
     reader.onloadend = () => {
@@ -308,15 +308,15 @@ const ExportPDF = ({ profileData }) => {
     };
   };
 
+  const handleExportPDF = () => {
+    generatePdfBase64(profileData);
+  };
+
   return (
     <div>
       <Button onClick={handleExportPDF}>Export Details as PDF</Button>
-      <PDFViewer width="100%" height="600px">
-        <ProfilePDF profileData={profileData} />
-      </PDFViewer>
     </div>
   );
 };
 
 export default ExportPDF;
-
