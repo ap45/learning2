@@ -1,0 +1,96 @@
+////controller
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/profile")
+public class ProfileController {
+
+    @PostMapping("/pdf")
+    public ResponseEntity<String> generatePdf(@RequestBody ProfileData profileData) {
+        byte[] pdfBytes = PdfGenerator.generatePdf(profileData);
+        String base64Pdf = Base64.getEncoder().encodeToString(pdfBytes);
+        return ResponseEntity.ok(base64Pdf);
+    }
+}
+
+
+///// UTIL
+import com.itextpdf.text.Document;
+import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Element;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.pdf.PdfPTable;
+import com.itextpdf.text.pdf.PdfWriter;
+import java.io.ByteArrayOutputStream;
+
+public class PdfGenerator {
+
+    public static byte[] generatePdf(ProfileData profileData) {
+        Document document = new Document();
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+        try {
+            PdfWriter.getInstance(document, outputStream);
+            document.open();
+            // Add profile data to the PDF
+            addProfileData(document, profileData);
+            document.close();
+        } catch (DocumentException e) {
+            e.printStackTrace();
+        }
+
+        return outputStream.toByteArray();
+    }
+
+    private static void addProfileData(Document document, ProfileData profileData) throws DocumentException {
+        document.add(new Paragraph("Profile ID: " + profileData.getProfileId()));
+        document.add(new Paragraph("Profile Type: " + profileData.getProfileType()));
+        // Add primary name
+        if (!profileData.getPrimaryName().isEmpty()) {
+            document.add(new Paragraph("Primary Name: " + profileData.getPrimaryName().get(0).getFirstName() +
+                    " " + profileData.getPrimaryName().get(0).getLastName()));
+        }
+        // Add status
+        document.add(new Paragraph("Status: " + profileData.getStatus()));
+        // Add gender
+        document.add(new Paragraph("Gender: " + profileData.getGender()));
+        // Add date of birth
+        document.add(new Paragraph("Date of Birth: " + profileData.getDateOfBirth().get(0).getYear()));
+        // Add profile relationships as a table
+        if (!profileData.getProfileRelationship().isEmpty()) {
+            PdfPTable table = new PdfPTable(2);
+            table.addCell("Relationship");
+            table.addCell("Association ID");
+            for (ProfileRelationship relationship : profileData.getProfileRelationship()) {
+                table.addCell(relationship.getRelationship().getRpmAssociation().getRtTypValue());
+                table.addCell(relationship.getAssociationId());
+            }
+            document.add(table);
+        }
+        // Add nationality or incorporation
+        if (!profileData.getNationalityOrInc().isEmpty()) {
+            document.add(new Paragraph("Nationality/Incorporation: " + profileData.getNationalityOrInc().get(0)));
+        }
+        // Add date of death if present
+        if (!profileData.getDateOfDeath().isEmpty()) {
+            document.add(new Paragraph("Date of Death: " + profileData.getDateOfDeath().get(0).getDate()));
+        }
+        // Add names as a table
+        if (!profileData.getNames().isEmpty()) {
+            PdfPTable table = new PdfPTable(3);
+            table.addCell("Name Type");
+            table.addCell("First Name");
+            table.addCell("Last Name");
+            for (ProfileName name : profileData.getNames()) {
+                table.addCell(name.getNameType());
+                table.addCell(name.getFirstName());
+                table.addCell(name.getLastName());
+            }
+            document.add(table);
+        }
+        // Add alternative ID
+        document.add(new Paragraph("Alternative ID: " + profileData.getAlternateId()));
+        // Add data source
+        document.add(new Paragraph("Data Source: " + profileData.getDataSource().getUbsDataSource()));
+    }
+}
