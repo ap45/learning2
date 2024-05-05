@@ -94,3 +94,86 @@ public class PdfGenerator {
         document.add(new Paragraph("Data Source: " + profileData.getDataSource().getUbsDataSource()));
     }
 }
+
+///////// new version
+
+
+import com.itextpdf.text.Document;
+import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.pdf.PdfPTable;
+import com.itextpdf.text.pdf.PdfWriter;
+import java.io.ByteArrayOutputStream;
+import java.util.List;
+
+public class PdfGenerator {
+
+    public static byte[] generatePdf(ProfileData profileData) {
+        Document document = new Document();
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+        try {
+            PdfWriter.getInstance(document, outputStream);
+            document.open();
+            // Add profile data to the PDF
+            addProfileData(document, profileData);
+            document.close();
+        } catch (DocumentException e) {
+            e.printStackTrace();
+        }
+
+        return outputStream.toByteArray();
+    }
+
+    private static void addProfileData(Document document, ProfileData profileData) throws DocumentException {
+        if (profileData.getProfileId() != null) {
+            document.add(new Paragraph("Profile ID: " + profileData.getProfileId()));
+        }
+        if (profileData.getProfileType() != null) {
+            document.add(new Paragraph("Profile Type: " + profileData.getProfileType()));
+        }
+        if (profileData.getPrimaryName() != null && !profileData.getPrimaryName().isEmpty()) {
+            document.add(new Paragraph("Primary Name: " + profileData.getPrimaryName().get(0).getFirstName() +
+                    " " + profileData.getPrimaryName().get(0).getLastName()));
+        }
+        if (profileData.getStatus() != null) {
+            document.add(new Paragraph("Status: " + profileData.getStatus()));
+        }
+        if (profileData.getGender() != null) {
+            document.add(new Paragraph("Gender: " + profileData.getGender()));
+        }
+        // Handle dateOfBirth
+        if (profileData.getDateOfBirth() != null && !profileData.getDateOfBirth().isEmpty()) {
+            StringBuilder dateOfBirthString = new StringBuilder();
+            for (DateDetails dateDetails : profileData.getDateOfBirth()) {
+                if (dateDetails.getDate() != null) {
+                    dateOfBirthString.append(dateDetails.getDate()).append(", ");
+                } else {
+                    String dateString = "";
+                    if (dateDetails.getDay() != null) {
+                        dateString += dateDetails.getDay() + "-";
+                    }
+                    if (dateDetails.getMonth() != null) {
+                        dateString += dateDetails.getMonth() + "-";
+                    }
+                    if (dateDetails.getYear() != null) {
+                        dateString += dateDetails.getYear();
+                    }
+                    if (!dateString.isEmpty()) {
+                        dateOfBirthString.append(dateString).append(", ");
+                    }
+                }
+            }
+            if (dateOfBirthString.length() > 0) {
+                dateOfBirthString.setLength(dateOfBirthString.length() - 2); // Remove the last comma and space
+                document.add(new Paragraph("Date of Birth: " + dateOfBirthString.toString()));
+            }
+        }
+        // Handle nationalityOrInc
+        if (profileData.getNationalityOrInc() != null && !profileData.getNationalityOrInc().isEmpty()) {
+            document.add(new Paragraph("Nationality Or Inc: " + String.join(", ", profileData.getNationalityOrInc())));
+        }
+        // Handle other fields similarly
+    }
+}
+
