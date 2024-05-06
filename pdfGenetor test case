@@ -59,3 +59,42 @@ public class PdfGeneratorTest {
 
     // Add more tests for other methods if necessary
 }
+
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
+import static org.mockito.Mockito.verify;
+
+@RunWith(MockitoJUnitRunner.class)
+public class PdfGeneratorTest {
+
+    @Mock
+    Document document;
+
+    @Mock
+    ProfileDetail profileData;
+
+    @Test
+    public void testAddProfileData() throws Exception {
+        // Mocking necessary data for ProfileDetail
+        when(profileData.getPrimaryName()).thenReturn(Arrays.asList(new Name("John", "Doe", "")));
+        when(profileData.getStatus()).thenReturn(1);
+        // Mocking other necessary data for ProfileDetail
+
+        // Using reflection to invoke the private static method
+        Method method = PdfGenerator.class.getDeclaredMethod("addProfileData", Document.class, ProfileDetail.class);
+        method.setAccessible(true);
+        method.invoke(null, document, profileData);
+
+        // Verifying method invocations
+        verify(document).add(any(Paragraph.class));
+        // Verify other expected method calls
+    }
+}
+
