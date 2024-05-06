@@ -444,3 +444,24 @@ public class ProfileControllerTest {
     }
 }
 
+///Mocked Static
+
+ @Test
+    public void testGeneratePdf_Success() {
+        // Sample profile data
+        ProfileData profileData = createSampleProfileData();
+
+        try (MockedStatic<PdfGenerator> mockedStatic = Mockito.mockStatic(PdfGenerator.class)) {
+            // Mocking PdfGenerator.generatePdf() method
+            byte[] pdfBytes = "Sample PDF".getBytes(); // Just a placeholder
+            mockedStatic.when(() -> PdfGenerator.generatePdf(Mockito.any(ProfileData.class))).thenReturn(pdfBytes);
+
+            // Perform POST request to generate PDF
+            ResponseEntity<String> responseEntity = profileController.generatePdf(profileData);
+
+            // Verify response
+            assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+            assertNotNull(responseEntity.getBody());
+            // Add more assertions if needed
+        }
+    }
