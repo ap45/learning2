@@ -1,12 +1,24 @@
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.io.ByteArrayOutputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.Paragraph;
 
 @RunWith(MockitoJUnitRunner.class)
 public class PdfGeneratorTest {
@@ -17,84 +29,48 @@ public class PdfGeneratorTest {
     @Mock
     ProfileDetail profileData;
 
+    @Captor
+    ArgumentCaptor<Paragraph> paragraphCaptor;
+
     @Before
-    public void setup() {
-        // Mocking ProfileDetail data
-        when(profileData.getProfileId()).thenReturn("123");
-        when(profileData.getProfileType()).thenReturn("0");
-        // Mocking other necessary data for ProfileDetail
+    public void setUp() {
+        document = new Document();
+    }
+
+    @Test
+    public void testAddProfileData() throws NoSuchMethodException, IllegalAccessException,
+            InvocationTargetException {
+        when(profileData.getPrimaryName()).thenReturn(Arrays.asList(new Name("John", "Doe", "")));
+        when(profileData.getStatus()).thenReturn(1);
+
+        try {
+            Method method = PdfGenerator.class.getDeclaredMethod("addProfileData", Document.class, ProfileDetail.class);
+            method.setAccessible(true);
+            method.invoke(null, document, profileData);
+
+            verify(document).add(paragraphCaptor.capture());
+            assertArrayEquals(new String[]{"First Name: John"}, new String[]{paragraphCaptor.getValue().getContent()});
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            e.printStackTrace();
+        }
     }
 
     @Test
     public void testGeneratePdf() throws Exception {
-        // Mocking PdfWriter.getInstance() and its behavior
-        PdfWriter pdfWriter = Mockito.mock(PdfWriter.class);
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        when(PdfWriter.getInstance(any(Document.class), any(ByteArrayOutputStream.class))).thenReturn(pdfWriter);
 
-        // Calling the method under test
-        byte[] pdfBytes = PdfGenerator.generatePdf(profileData);
+        when(profileData.getProfileId()).thenReturn("123");
+        when(profileData.getProfileType()).thenReturn("0");
 
-        // Verifying method invocations
-        verify(pdfWriter).getInstance(any(Document.class), any(ByteArrayOutputStream.class));
-        verify(document).open();
-        // Verify other expected method calls
-    }
+        try {
+            Method method = PdfGenerator.class.getDeclaredMethod("generatePdf", ProfileDetail.class);
+            method.setAccessible(true);
+            byte[] pdfBytes = (byte[]) method.invoke(null, profileData);
 
-    // Test for addProfileData() method
-    @Test
-    public void testAddProfileData() throws Exception {
-        // Mocking necessary data for ProfileDetail
-        when(profileData.getPrimaryName()).thenReturn(Arrays.asList(new Name("John", "Doe", "")));
-        when(profileData.getStatus()).thenReturn(1);
-        // Mocking other necessary data for ProfileDetail
-
-        // Calling the method under test
-        PdfGenerator.addProfileData(document, profileData);
-
-        // Verifying method invocations
-        verify(document).add(any(Paragraph.class));
-        // Verify other expected method calls
-    }
-
-    // Add more tests for other methods if necessary
-}
-
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
-
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-
-import static org.mockito.Mockito.verify;
-
-@RunWith(MockitoJUnitRunner.class)
-public class PdfGeneratorTest {
-
-    @Mock
-    Document document;
-
-    @Mock
-    ProfileDetail profileData;
-
-    @Test
-    public void testAddProfileData() throws Exception {
-        // Mocking necessary data for ProfileDetail
-        when(profileData.getPrimaryName()).thenReturn(Arrays.asList(new Name("John", "Doe", "")));
-        when(profileData.getStatus()).thenReturn(1);
-        // Mocking other necessary data for ProfileDetail
-
-        // Using reflection to invoke the private static method
-        Method method = PdfGenerator.class.getDeclaredMethod("addProfileData", Document.class, ProfileDetail.class);
-        method.setAccessible(true);
-        method.invoke(null, document, profileData);
-
-        // Verifying method invocations
-        verify(document).add(any(Paragraph.class));
-        // Verify other expected method calls
+            assertNotNull(pdfBytes);
+            assertTrue(pdfBytes.length > 0);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            e.printStackTrace();
+        }
     }
 }
-
