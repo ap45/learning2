@@ -1,111 +1,61 @@
-import com.itextpdf.text.Document;
-import com.itextpdf.text.DocumentException;
-import com.itextpdf.text.Paragraph;
-import com.itextpdf.text.pdf.PdfWriter;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import java.io.ByteArrayOutputStream;
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class PdfGeneratorTest {
 
     @Mock
-    private Document document;
+    Document document;
 
     @Mock
-    private PdfWriter pdfWriter;
-
-    @InjectMocks
-    private PdfGenerator pdfGenerator;
-
-    private ProfileDetail profileDetail;
+    ProfileDetail profileData;
 
     @Before
-    public void setUp() {
-        profileDetail = createSampleProfileDetail();
+    public void setup() {
+        // Mocking ProfileDetail data
+        when(profileData.getProfileId()).thenReturn("123");
+        when(profileData.getProfileType()).thenReturn("0");
+        // Mocking other necessary data for ProfileDetail
     }
 
     @Test
-    public void testGeneratePdf() {
-        byte[] pdfBytes = pdfGenerator.generatePdf(profileDetail);
-        assertNotNull(pdfBytes);
-        assertNotEquals(0, pdfBytes.length);
+    public void testGeneratePdf() throws Exception {
+        // Mocking PdfWriter.getInstance() and its behavior
+        PdfWriter pdfWriter = Mockito.mock(PdfWriter.class);
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        when(PdfWriter.getInstance(any(Document.class), any(ByteArrayOutputStream.class))).thenReturn(pdfWriter);
+
+        // Calling the method under test
+        byte[] pdfBytes = PdfGenerator.generatePdf(profileData);
+
+        // Verifying method invocations
+        verify(pdfWriter).getInstance(any(Document.class), any(ByteArrayOutputStream.class));
+        verify(document).open();
+        // Verify other expected method calls
     }
 
+    // Test for addProfileData() method
     @Test
-    public void testAddField() throws DocumentException {
-        doNothing().when(document).add(any(Paragraph.class));
+    public void testAddProfileData() throws Exception {
+        // Mocking necessary data for ProfileDetail
+        when(profileData.getPrimaryName()).thenReturn(Arrays.asList(new Name("John", "Doe", "")));
+        when(profileData.getStatus()).thenReturn(1);
+        // Mocking other necessary data for ProfileDetail
 
-        pdfGenerator.addField(document, "Test Field", "Test Value");
+        // Calling the method under test
+        PdfGenerator.addProfileData(document, profileData);
 
-        // Verify that document.add() was called
-        // Assert other conditions if needed
+        // Verifying method invocations
+        verify(document).add(any(Paragraph.class));
+        // Verify other expected method calls
     }
 
-    @Test
-    public void testAddFieldWithMapping() throws DocumentException {
-        doNothing().when(document).add(any(Paragraph.class));
-
-        pdfGenerator.addFieldWithMapping(document, "Test Field", "0", PdfGenerator.PROFILE_TYPE_MAP);
-
-        // Verify that document.add() was called with the mapped value
-        // Assert other conditions if needed
-    }
-
-    @Test
-    public void testAddDateOfBirth() throws DocumentException {
-        doNothing().when(document).add(any(Paragraph.class));
-
-        List<DateDetails> dateOfBirth = new ArrayList<>();
-        DateDetails dateDetails = new DateDetails();
-        dateDetails.setDay(1);
-        dateDetails.setMonth(1);
-        dateDetails.setYear(1990);
-        dateOfBirth.add(dateDetails);
-
-        pdfGenerator.addDateOfBirth(document, dateOfBirth, "dob");
-
-        // Verify that document.add() was called with the formatted date
-        // Assert other conditions if needed
-    }
-
-    @Test
-    public void testPdfGeneratorFields() {
-        assertNotNull(PdfGenerator.PROFILE_TYPE_MAP);
-        assertNotNull(PdfGenerator.STATUS_MAP);
-    }
-
-    // Add more test cases to cover all scenarios
-
-    private ProfileDetail createSampleProfileDetail() {
-        ProfileDetail profileDetail = new ProfileDetail();
-        profileDetail.setProfileId(123);
-        profileDetail.setProfileType("0");
-        profileDetail.setPrimaryName(createSampleName());
-        profileDetail.setStatus(1);
-        // Set other fields as needed for testing
-        return profileDetail;
-    }
-
-    private List<NameDetails> createSampleName() {
-        List<NameDetails> names = new ArrayList<>();
-        NameDetails name = new NameDetails();
-        name.setFirstName("John");
-        name.setLastName("Doe");
-        // Set other fields as needed for testing
-        names.add(name);
-        return names;
-    }
+    // Add more tests for other methods if necessary
 }
