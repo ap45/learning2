@@ -177,3 +177,188 @@ public class PdfGenerator {
     }
 }
 
+/////// profile status////
+import com.itextpdf.text.Document;
+import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.pdf.PdfPTable;
+import com.itextpdf.text.pdf.PdfWriter;
+import java.io.ByteArrayOutputStream;
+import java.util.List;
+
+public class PdfGenerator {
+
+    public static byte[] generatePdf(ProfileData profileData) {
+        Document document = new Document();
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+        try {
+            PdfWriter.getInstance(document, outputStream);
+            document.open();
+            // Add profile data to the PDF
+            addProfileData(document, profileData);
+            document.close();
+        } catch (DocumentException e) {
+            e.printStackTrace();
+        }
+
+        return outputStream.toByteArray();
+    }
+
+    private static void addProfileData(Document document, ProfileData profileData) throws DocumentException {
+        if (profileData.getProfileId() != null) {
+            document.add(new Paragraph("Profile ID: " + profileData.getProfileId()));
+        }
+        // Handle Profile Type
+        if (profileData.getProfileType() != null) {
+            String profileType = profileData.getProfileType().equals("0") ? "Individual" : "Company";
+            document.add(new Paragraph("Profile Type: " + profileType));
+        }
+        if (profileData.getPrimaryName() != null && !profileData.getPrimaryName().isEmpty()) {
+            document.add(new Paragraph("Primary Name: " + profileData.getPrimaryName().get(0).getFirstName() +
+                    " " + profileData.getPrimaryName().get(0).getLastName()));
+        }
+        // Handle Status
+        if (profileData.getStatus() != null) {
+            String status = profileData.getStatus().equals("0") ? "Inactive" : "Active";
+            document.add(new Paragraph("Status: " + status));
+        }
+        if (profileData.getGender() != null) {
+            document.add(new Paragraph("Gender: " + profileData.getGender()));
+        }
+        // Handle dateOfBirth
+        if (profileData.getDateOfBirth() != null && !profileData.getDateOfBirth().isEmpty()) {
+            StringBuilder dateOfBirthString = new StringBuilder();
+            for (DateDetails dateDetails : profileData.getDateOfBirth()) {
+                if (dateDetails.getDate() != null) {
+                    dateOfBirthString.append(dateDetails.getDate()).append(", ");
+                } else {
+                    String dateString = "";
+                    if (dateDetails.getDay() != null) {
+                        dateString += dateDetails.getDay() + "-";
+                    }
+                    if (dateDetails.getMonth() != null) {
+                        dateString += dateDetails.getMonth() + "-";
+                    }
+                    if (dateDetails.getYear() != null) {
+                        dateString += dateDetails.getYear();
+                    }
+                    if (!dateString.isEmpty()) {
+                        dateOfBirthString.append(dateString).append(", ");
+                    }
+                }
+            }
+            if (dateOfBirthString.length() > 0) {
+                dateOfBirthString.setLength(dateOfBirthString.length() - 2); // Remove the last comma and space
+                document.add(new Paragraph("Date of Birth: " + dateOfBirthString.toString()));
+            }
+        }
+        // Handle nationalityOrInc
+        if (profileData.getNationalityOrInc() != null && !profileData.getNationalityOrInc().isEmpty()) {
+            document.add(new Paragraph("Nationality Or Inc: " + String.join(", ", profileData.getNationalityOrInc())));
+        }
+        // Handle other fields similarly
+    }
+}
+
+///////////generalized code ///////
+import com.itextpdf.text.Document;
+import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.pdf.PdfWriter;
+import java.io.ByteArrayOutputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class PdfGenerator {
+
+    private static final Map<String, String> PROFILE_TYPE_MAP = new HashMap<>();
+    private static final Map<String, String> STATUS_MAP = new HashMap<>();
+
+    static {
+        PROFILE_TYPE_MAP.put("0", "Individual");
+        PROFILE_TYPE_MAP.put("1", "Company");
+
+        STATUS_MAP.put("0", "Inactive");
+        STATUS_MAP.put("1", "Active");
+    }
+
+    public static byte[] generatePdf(ProfileData profileData) {
+        Document document = new Document();
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+        try {
+            PdfWriter.getInstance(document, outputStream);
+            document.open();
+            // Add profile data to the PDF
+            addProfileData(document, profileData);
+            document.close();
+        } catch (DocumentException e) {
+            e.printStackTrace();
+        }
+
+        return outputStream.toByteArray();
+    }
+
+    private static void addProfileData(Document document, ProfileData profileData) throws DocumentException {
+        addField(document, "Profile ID", profileData.getProfileId());
+        addField(document, "Profile Type", profileData.getProfileType(), PROFILE_TYPE_MAP);
+        addField(document, "Primary Name", getFullName(profileData.getPrimaryName()));
+        addField(document, "Status", profileData.getStatus(), STATUS_MAP);
+        addField(document, "Gender", profileData.getGender());
+        addDateOfBirth(document, profileData.getDateOfBirth());
+        addField(document, "Nationality Or Inc", String.join(", ", profileData.getNationalityOrInc()));
+        // Add other fields similarly
+    }
+
+    private static void addField(Document document, String fieldName, String value) throws DocumentException {
+        if (value != null && !value.isEmpty()) {
+            document.add(new Paragraph(fieldName + ": " + value));
+        }
+    }
+
+    private static void addField(Document document, String fieldName, String value, Map<String, String> valueMap)
+            throws DocumentException {
+        if (value != null && valueMap.containsKey(value)) {
+            document.add(new Paragraph(fieldName + ": " + valueMap.get(value)));
+        }
+    }
+
+    private static void addDateOfBirth(Document document, List<DateDetails> dateOfBirth) throws DocumentException {
+        if (dateOfBirth != null && !dateOfBirth.isEmpty()) {
+            StringBuilder dateOfBirthString = new StringBuilder();
+            for (DateDetails dateDetails : dateOfBirth) {
+                String dateString = "";
+                if (dateDetails.getDate() != null) {
+                    dateString = dateDetails.getDate();
+                } else {
+                    if (dateDetails.getDay() != null) {
+                        dateString += dateDetails.getDay() + "-";
+                    }
+                    if (dateDetails.getMonth() != null) {
+                        dateString += dateDetails.getMonth() + "-";
+                    }
+                    if (dateDetails.getYear() != null) {
+                        dateString += dateDetails.getYear();
+                    }
+                }
+                if (!dateString.isEmpty()) {
+                    dateOfBirthString.append(dateString).append(", ");
+                }
+            }
+            if (dateOfBirthString.length() > 0) {
+                dateOfBirthString.setLength(dateOfBirthString.length() - 2); // Remove the last comma and space
+                document.add(new Paragraph("Date of Birth: " + dateOfBirthString.toString()));
+            }
+        }
+    }
+
+    private static String getFullName(List<Name> names) {
+        if (names != null && !names.isEmpty()) {
+            Name name = names.get(0);
+            return name.getFirstName() + " " + name.getLastName();
+        }
+        return null;
+    }
+}
