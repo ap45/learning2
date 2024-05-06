@@ -361,4 +361,86 @@ public class PdfGenerator {
         }
         return null;
     }
+
 }
+
+
+
+//////////////Controller test case
+
+
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import java.util.Collections;
+import java.util.Base64;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
+@RunWith(MockitoJUnitRunner.class)
+public class ProfileControllerTest {
+
+    @InjectMocks
+    private ProfileController profileController;
+
+    @Mock
+    private PdfGenerator pdfGenerator;
+
+    @Before
+    public void setup() {
+        MockitoAnnotations.initMocks(this);
+    }
+
+    @Test
+    public void testGeneratePdf_Success() {
+        // Given
+        ProfileData profileData = createSampleProfileData();
+        byte[] pdfBytes = {1, 2, 3}; // Sample PDF bytes
+        String base64EncodedPdf = Base64.getEncoder().encodeToString(pdfBytes);
+        when(pdfGenerator.generatePdf(any(ProfileData.class))).thenReturn(pdfBytes);
+
+        // When
+        ResponseEntity<String> responseEntity = profileController.generatePdf(profileData);
+
+        // Then
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        assertEquals(base64EncodedPdf, responseEntity.getBody());
+    }
+
+    @Test
+    public void testGeneratePdf_Failure_InvalidProfileData() {
+        // Given
+        ProfileData invalidProfileData = new ProfileData(); // Empty ProfileData
+
+        // When
+        ResponseEntity<String> responseEntity = profileController.generatePdf(invalidProfileData);
+
+        // Then
+        assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
+    }
+
+    // Utility method to create a sample ProfileData object
+    private ProfileData createSampleProfileData() {
+        ProfileData profileData = new ProfileData();
+        profileData.setProfileId(1007074015);
+        profileData.setProfileType("0");
+        profileData.setPrimaryName(Collections.singletonList(new NameDetails("Amit", "Bhogale")));
+        profileData.setStatus(1);
+        profileData.setGender("Male");
+        profileData.setDateOfBirth(Collections.singletonList(new DateDetails(1, "Date of Birth", null, null, null, "1982")));
+        profileData.setNationalityOrInc(Collections.singletonList("India"));
+        profileData.setNames(Collections.singletonList(new NameDetails("Low Quality AKA", "Jack")));
+        profileData.setAlternateId("F_1068198");
+        profileData.setDataSource(new DataSource("1028645", "Standard Watchlist data from DJ", Collections.singletonList("DNA - Daily News & Analysis, 14-Oct-2008, on Factiva.com")));
+        profileData.setAddress(Collections.singletonList(new Address("Libertyville: Illinois", null, null, null, "USA")));
+        return profileData;
+    }
+}
+
