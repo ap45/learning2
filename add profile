@@ -1,0 +1,1176 @@
+//1st logic ----without next button redux 
+
+
+import React from 'react';
+import { Stepper, Step, StepLabel, Button, Typography, Box } from '@mui/material';
+import CreateProfile from './CreateProfile';
+import RiskDetails from './RiskDetails';
+import AdditionalDetails from './AdditionalDetails';
+
+const steps = ['Name Details', 'Risk Details', 'Additional Details', 'Comments and Attachments'];
+
+const CreateProfileWrapper = () => {
+  const [activeStep, setActiveStep] = React.useState(0);
+  const [isNextEnabled, setIsNextEnabled] = React.useState(false);
+
+  const handleNext = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+  };
+
+  const handleBack = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep - 1);
+  };
+
+  return (
+    <Box sx={{ width: '100%' }}>
+      <Stepper activeStep={activeStep}>
+        {steps.map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+      <div>
+        {activeStep === steps.length ? (
+          <Box sx={{ mt: 2, mb: 2 }}>
+            <Typography>All steps completed</Typography>
+          </Box>
+        ) : (
+          <div>
+            <Box sx={{ mt: 2, mb: 2 }}>
+              {activeStep === 0 && <CreateProfile setIsNextEnabled={setIsNextEnabled} />}
+              {activeStep === 1 && <RiskDetails setIsNextEnabled={setIsNextEnabled} />}
+              {activeStep === 2 && <AdditionalDetails setIsNextEnabled={setIsNextEnabled} />}
+            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'row', pt: 2 }}>
+              <Button
+                color="inherit"
+                disabled={activeStep === 0}
+                onClick={handleBack}
+                sx={{ mr: 1 }}
+              >
+                Back
+              </Button>
+              <Box sx={{ flex: '1 1 auto' }} />
+              <Button
+                variant="contained"
+                onClick={handleNext}
+                disabled={!isNextEnabled}
+              >
+                {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
+              </Button>
+            </Box>
+          </div>
+        )}
+      </div>
+    </Box>
+  );
+};
+
+export default CreateProfileWrapper;
+import React, { useState, useEffect } from 'react';
+import { Box, Grid, Button, Typography, TextField, FormControl, InputLabel, Select, MenuItem, IconButton } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import NameComponent from './NameComponent';
+
+const generateRandomString = () => Math.random().toString(36).substring(2, 15);
+
+const initialName = {
+  id: generateRandomString(),
+  type: '',
+  lastName: '',
+  firstName: '',
+  middleName: '',
+  title: ''
+};
+
+const CreateProfile = ({ setIsNextEnabled }) => {
+  const [names, setNames] = useState([{ ...initialName, type: '1' }]);
+  const [errorProfile, setErrorProfile] = useState({
+    type: '',
+    lastName: '',
+    firstName: ''
+  });
+
+  useEffect(() => {
+    validatePrimaryName();
+  }, [names]);
+
+  const handleChange = (e, id, field) => {
+    const { value } = e.target;
+    setNames((prevNames) =>
+      prevNames.map((name) =>
+        name.id === id ? { ...name, [field]: value } : name
+      )
+    );
+  };
+
+  const handleAddName = () => {
+    setNames([...names, { ...initialName, id: generateRandomString() }]);
+  };
+
+  const handleRemoveName = (id) => {
+    setNames((prevNames) => prevNames.filter((name) => name.id !== id));
+  };
+
+  const validatePrimaryName = () => {
+    const primaryName = names[0];
+    const errors = {
+      type: '',
+      lastName: '',
+      firstName: ''
+    };
+    if (!primaryName.firstName.trim()) {
+      errors.firstName = 'First Name is required';
+    }
+    if (!primaryName.lastName.trim()) {
+      errors.lastName = 'Last Name is required';
+    }
+    setErrorProfile(errors);
+    const isValid = !errors.firstName && !errors.lastName;
+    setIsNextEnabled(isValid);
+  };
+
+  return (
+    <Box>
+      <Typography variant="h6">Primary Name</Typography>
+      <NameComponent
+        name={names[0]}
+        handleChange={handleChange}
+        handleRemove={() => {}}
+        profileType="Person"
+        showLabels
+        errorProfile={errorProfile}
+      />
+      <Button variant="contained" onClick={handleAddName}>
+        + Add Another Name
+      </Button>
+      {names.slice(1).map((name, index) => (
+        <NameComponent
+          key={name.id}
+          name={name}
+          handleChange={handleChange}
+          handleRemove={handleRemoveName}
+          profileType="Person"
+          showLabels={false}
+          errorProfile={{}}
+        />
+      ))}
+    </Box>
+  );
+};
+
+export default CreateProfile;
+
+
+import React from 'react';
+import { Box, Grid, TextField, FormControl, InputLabel, Select, MenuItem, IconButton, Typography } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import PropTypes from 'prop-types';
+
+const nameTypes = [
+  { name: 'Also Known As', id: '2', type: 'Person' },
+  { name: 'Low Quality AKA', id: '3', type: 'Person' },
+  { name: 'Maiden Name', id: '4', type: 'Person' },
+  { name: 'Formerly Known As', id: '5', type: 'Person' },
+  { name: 'Spelling Variation', id: '6', type: 'Person' },
+  { name: 'Also Known As', id: '8', type: 'Entity' },
+  { name: 'Low Quality AKA', id: '9', type: 'Entity' }
+];
+
+const NameComponent = ({ name, handleChange, handleRemove, profileType, showLabels, errorProfile }) => {
+  const filteredNameTypes = nameTypes.filter(nt => nt.type === profileType);
+
+  return (
+    <Box mb={4}>
+      <Grid container spacing={2} alignItems="center">
+        {showLabels && (
+          <>
+            <Grid item xs={2}>
+              <Typography>Type</Typography>
+            </Grid>
+            <Grid item xs={2}>
+              <Typography>Last Name</Typography>
+            </Grid>
+            <Grid item xs={2}>
+              <Typography>First Name</Typography>
+            </Grid>
+            <Grid item xs={2}>
+              <Typography>Middle Name</Typography>
+            </Grid>
+            <Grid item xs={2}>
+              <Typography>Title</Typography>
+            </Grid>
+          </>
+        )}
+        <Grid item xs={2}>
+          <FormControl fullWidth>
+            {showLabels && <InputLabel>Type</InputLabel>}
+            <Select
+              name={`type-${name.id}`}
+              value={name.type}
+              onChange={(e) => handleChange({ ...e, target: { ...e.target, value: e.selectedItemId } }, name.id, 'type')}
+              label={showLabels ? "Type" : ""}
+            >
+              <MenuItem value="">Select type</MenuItem>
+              {filteredNameTypes.map((nt) => (
+                <MenuItem key={nt.id} value={nt.id}>{nt.name}</MenuItem>
+              ))}
+            </Select>
+            {errorProfile.type && <Typography color="error">{errorProfile.type}</Typography>}
+          </FormControl>
+        </Grid>
+        <Grid item xs={2}>
+          <TextField
+            name={`lastName-${name.id}`}
+            value={name.lastName}
+            onChange={(e) => handleChange(e, name.id, 'lastName')}
+            fullWidth
+            label={showLabels ? "Last Name" : ""}
+          />
+          {errorProfile.lastName && <Typography color="error">{errorProfile.lastName}</Typography>}
+        </Grid>
+        <Grid item xs={2}>
+          <TextField
+            name={`firstName-${name.id}`}
+            value={name.firstName}
+            onChange={(e) => handleChange(e, name.id, 'firstName')}
+            fullWidth
+            label={showLabels ? "First Name" : ""}
+          />
+          {errorProfile.firstName && <Typography color="error">{errorProfile.firstName}</Typography>}
+        </Grid>
+        <Grid item xs={2}>
+          <TextField
+            name={`middleName-${name.id}`}
+            value={name.middleName}
+            onChange={(e) => handleChange(e, name.id, 'middleName')}
+            fullWidth
+            label={showLabels ? "Middle Name" : ""}
+          />
+        </Grid>
+        <Grid item xs={2}>
+          <TextField
+            name={`title-${name.id}`}
+            value={name.title}
+            onChange={(e) => handleChange(e, name.id, 'title')}
+            fullWidth
+            label={showLabels ? "Title" : ""}
+          />
+        </Grid>
+        <Grid item xs={1}>
+          <IconButton onClick={() => handleRemove(name.id)} disabled={name.type === '1'}>
+            <DeleteIcon />
+          </IconButton>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+};
+
+NameComponent.propTypes = {
+  name: PropTypes.object.isRequired,
+  handleChange: PropTypes.func.isRequired,
+  handleRemove: PropTypes.func.isRequired,
+  profileType: PropTypes.string.isRequired,
+  showLabels: PropTypes.bool.isRequired,
+  errorProfile: PropTypes.object.isRequired
+};
+
+export default NameComponent;
+
+
+import React, { useState, useEffect } from 'react';
+import { Box, TextField, Typography } from '@mui/material';
+
+const RiskDetails = ({ setIsNextEnabled }) => {
+  const [riskDetails, setRiskDetails] = useState({
+    sourcelist: '',
+    reason: '',
+    reasonType: ''
+  });
+
+  const [errorRiskDetails, setErrorRiskDetails] = useState({
+    sourcelist: '',
+    reason: '',
+    reasonType: ''
+  });
+
+  useEffect(() => {
+    validateRiskDetails();
+  }, [riskDetails]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setRiskDetails({ ...riskDetails, [name]: value });
+  };
+
+  const validateRiskDetails = () => {
+    const errors = {
+      sourcelist: '',
+      reason: '',
+      reasonType: ''
+    };
+    if (!riskDetails.sourcelist.trim()) {
+      errors.sourcelist = 'Source list is required';
+    }
+    if (!riskDetails.reason.trim()) {
+      errors.reason = 'Reason is required';
+    }
+    if (!riskDetails.reasonType.trim()) {
+      errors.reasonType = 'Reason type is required';
+    }
+    setErrorRiskDetails(errors);
+    const isValid = !errors.sourcelist && !errors.reason && !errors.reasonType;
+    setIsNextEnabled(isValid);
+  };
+
+  return (
+    <Box>
+      <Typography variant="h6">Risk Details</Typography>
+      <TextField
+        name="sourcelist"
+        value={riskDetails.sourcelist}
+        onChange={handleChange}
+        fullWidth
+        label="Source List"
+      />
+      {errorRiskDetails.sourcelist && <Typography color="error">{errorRiskDetails.sourcelist}</Typography>}
+      <TextField
+        name="reason"
+        value={riskDetails.reason}
+        onChange={handleChange}
+        fullWidth
+        label="Reason"
+      />
+      {errorRiskDetails.reason && <Typography color="error">{errorRiskDetails.reason}</Typography>}
+      <TextField
+        name="reasonType"
+        value={riskDetails.reasonType}
+        onChange={handleChange}
+        fullWidth
+        label="Reason Type"
+      />
+      {errorRiskDetails.reasonType && <Typography color="error">{errorRiskDetails.reasonType}</Typography>}
+    </Box>
+  );
+};
+
+export default RiskDetails;
+
+
+import React, { useState, useEffect } from 'react';
+import { Box, TextField, Typography } from '@mui/material';
+
+const AdditionalDetails = ({ setIsNextEnabled }) => {
+  const [additionalDetails, setAdditionalDetails] = useState({
+    idDetails: ''
+  });
+
+  const [errorAdditionalDetails, setErrorAdditionalDetails] = useState({
+    idDetails: ''
+  });
+
+  useEffect(() => {
+    validateAdditionalDetails();
+  }, [additionalDetails]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setAdditionalDetails({ ...additionalDetails, [name]: value });
+  };
+
+  const validateAdditionalDetails = () => {
+    const errors = {
+      idDetails: ''
+    };
+    if (!additionalDetails.idDetails.trim()) {
+      errors.idDetails = 'ID Details are required';
+    }
+    setErrorAdditionalDetails(errors);
+    const isValid = !errors.idDetails;
+    setIsNextEnabled(isValid);
+  };
+
+  return (
+    <Box>
+      <Typography variant="h6">Additional Details</Typography>
+      <TextField
+        name="idDetails"
+        value={additionalDetails.idDetails}
+        onChange={handleChange}
+        fullWidth
+        label="ID Details"
+      />
+      {errorAdditionalDetails.idDetails && <Typography color="error">{errorAdditionalDetails.idDetails}</Typography>}
+    </Box>
+  );
+};
+
+export default AdditionalDetails;
+
+
+
+
+////////// second logic --with reduxx
+
+
+const initialState = {
+  names: [{ id: generateRandomString(), type: '1', lastName: '', firstName: '', middleName: '', title: '' }],
+  isNextEnabled: false,
+};
+
+export const SET_NAMES = 'SET_NAMES';
+export const SET_PROFILE_NEXT_ENABLED = 'SET_PROFILE_NEXT_ENABLED';
+
+export const setNames = (names) => ({ type: SET_NAMES, payload: names });
+export const setProfileNextEnabled = (isEnabled) => ({ type: SET_PROFILE_NEXT_ENABLED, payload: isEnabled });
+
+const profileReducer = (state = initialState, action) => {
+  switch (action.type) {
+    case SET_NAMES:
+      return { ...state, names: action.payload };
+    case SET_PROFILE_NEXT_ENABLED:
+      return { ...state, isNextEnabled: action.payload };
+    default:
+      return state;
+  }
+};
+
+export default profileReducer;
+
+const initialState = {
+  idDetails: '',
+  isNextEnabled: false,
+};
+
+export const SET_ADDITIONAL_DETAILS = 'SET_ADDITIONAL_DETAILS';
+export const SET_ADDITIONAL_NEXT_ENABLED = 'SET_ADDITIONAL_NEXT_ENABLED';
+
+export const setAdditionalDetails = (details) => ({ type: SET_ADDITIONAL_DETAILS, payload: details });
+export const setAdditionalNextEnabled = (isEnabled) => ({ type: SET_ADDITIONAL_NEXT_ENABLED, payload: isEnabled });
+
+const additionalDetailsReducer = (state = initialState, action) => {
+  switch (action.type) {
+    case SET_ADDITIONAL_DETAILS:
+      return { ...state, ...action.payload };
+    case SET_ADDITIONAL_NEXT_ENABLED:
+      return { ...state, isNextEnabled: action.payload };
+    default:
+      return state;
+  }
+};
+
+export default additionalDetailsReducer;
+
+
+import React, { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { TextField, Select, MenuItem, Button, Grid, IconButton, Typography, FormControl, InputLabel, Box } from '@mui/material';
+import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+import { setNames, setProfileNextEnabled } from './profileReducer';
+import NameComponent from './NameComponent';
+
+const initialNameState = { id: generateRandomString(), type: '', lastName: '', firstName: '', middleName: '', title: '' };
+
+const CreateProfile = ({ profileType = "Person" }) => {
+  const dispatch = useDispatch();
+  const names = useSelector((state) => state.profile.names);
+  const [errorProfile, setErrorProfile] = useState({});
+
+  const handleChange = (e, id, field) => {
+    const value = e.target.value.trim();
+    const newNames = names.map(name => name.id === id ? { ...name, [field]: value } : name);
+    dispatch(setNames(newNames));
+    validateField(field, value);
+  };
+
+  const handleAddOtherName = () => {
+    dispatch(setNames([...names, { ...initialNameState, id: generateRandomString() }]));
+  };
+
+  const handleRemoveOtherName = (id) => {
+    const newNames = names.filter(name => name.id !== id);
+    dispatch(setNames(newNames));
+  };
+
+  const validateField = (field, value) => {
+    let error = '';
+
+    if (!value || value.trim() === '') {
+      error = 'This field is required';
+    }
+
+    setErrorProfile((prev) => ({ ...prev, [field]: error }));
+    validateForm();
+  };
+
+  const validateForm = () => {
+    const isValid = names.every(name => name.firstName && name.lastName && name.type && !name.firstName.includes(' ') && !name.lastName.includes(' ') && !name.type.includes(' '));
+    dispatch(setProfileNextEnabled(isValid));
+  };
+
+  return (
+    <div style={{ padding: 20 }}>
+      <Typography variant="h5" gutterBottom>
+        Create a new profile for an individual
+      </Typography>
+      <Box mb={4}>
+        <Typography variant="h6" gutterBottom>
+          Primary Name
+        </Typography>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={2}>
+            <Typography>Last Name</Typography>
+            <TextField
+              name={`lastName-primary`}
+              value={names[0].lastName}
+              onChange={(e) => handleChange(e, names[0].id, 'lastName')}
+              fullWidth
+              label="Last Name"
+            />
+            {errorProfile.lastName && <Typography color="error">{errorProfile.lastName}</Typography>}
+          </Grid>
+          <Grid item xs={2}>
+            <Typography>First Name</Typography>
+            <TextField
+              name={`firstName-primary`}
+              value={names[0].firstName}
+              onChange={(e) => handleChange(e, names[0].id, 'firstName')}
+              fullWidth
+              label="First Name"
+            />
+            {errorProfile.firstName && <Typography color="error">{errorProfile.firstName}</Typography>}
+          </Grid>
+          <Grid item xs={2}>
+            <Typography>Middle Name</Typography>
+            <TextField
+              name={`middleName-primary`}
+              value={names[0].middleName}
+              onChange={(e) => handleChange(e, names[0].id, 'middleName')}
+              fullWidth
+              label="Middle Name"
+            />
+          </Grid>
+          <Grid item xs={2}>
+            <Typography>Title</Typography>
+            <FormControl fullWidth>
+              <InputLabel>Title</InputLabel>
+              <Select
+                name={`title-primary`}
+                value={names[0].title}
+                onChange={(e) => handleChange(e, names[0].id, 'title')}
+                label="Title"
+              >
+                <MenuItem value="">Select title</MenuItem>
+                <MenuItem value="mr">Mr.</MenuItem>
+                <MenuItem value="mrs">Mrs.</MenuItem>
+                <MenuItem value="ms">Ms.</MenuItem>
+                <MenuItem value="dr">Dr.</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Box>
+
+      <Typography variant="h6" gutterBottom>
+        Other Names
+      </Typography>
+      {names.slice(1).map((name, index) => (
+        <NameComponent
+          key={name.id}
+          name={name}
+          handleChange={handleChange}
+          handleRemove={handleRemoveOtherName}
+          profileType={profileType}
+          showLabels={index === 0}
+          errorProfile={errorProfile}
+        />
+      ))}
+      <Button
+        variant="contained"
+        color="primary"
+        startIcon={<AddIcon />}
+        onClick={handleAddOtherName}
+        style={{ marginTop: 20 }}
+      >
+        Add another name
+      </Button>
+    </div>
+  );
+};
+
+export default CreateProfile;
+
+
+import React from 'react';
+import PropTypes from 'prop-types';
+import { TextField, Select, MenuItem, IconButton, Typography, FormControl, InputLabel, Box, Grid } from '@mui/material';
+import { Delete as DeleteIcon } from '@mui/icons-material';
+
+const nameTypes = [
+  { name: "Also Known As", id: "2", type: "Person" },
+  { name: "Low Quality AKA", id: "3", type: "Person" },
+  { name: "Maiden Name", id: "4", type: "Person" },
+  { name: "Formerly Known As", id: "5", type: "Person" },
+  { name: "Spelling Variation", id: "6", type: "Person" },
+  { name: "Also Known As", id: "8", type: "Entity" },
+  { name: "Low Quality AKA", id: "9", type: "Entity" }
+];
+
+const NameComponent = ({ name, handleChange, handleRemove, profileType, showLabels, errorProfile }) => {
+  const filteredNameTypes = nameTypes.filter(nt => nt.type === profileType);
+
+  return (
+    <Box mb={4}>
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={2}>
+          {showLabels && <Typography>Type</Typography>}
+          <FormControl fullWidth>
+            {showLabels && <InputLabel>Type</InputLabel>}
+            <Select
+              name={`type-${name.id}`}
+              value={name.type}
+              onChange={(e) => handleChange({ ...e, target: { ...e.target, value: e.selectedItemId } }, name.id, 'type')}
+              label={showLabels ? "Type" : ""}
+            >
+              <MenuItem value="">Select type</MenuItem>
+              {filteredNameTypes.map((nt) => (
+                <MenuItem key={nt.id} value={nt.id}>{nt.name}</MenuItem>
+              ))}
+            </Select>
+            {errorProfile.type && <Typography color="error">{errorProfile.type}</Typography>}
+          </FormControl>
+        </Grid>
+        <Grid item xs={2}>
+          {showLabels && <Typography>Last Name</Typography>}
+          <TextField
+            name={`lastName-${name.id}`}
+            value={name.lastName}
+            onChange={(e) => handleChange(e, name.id, 'lastName')}
+            fullWidth
+            label={showLabels ? "Last Name" : ""}
+          />
+          {errorProfile.lastName && <Typography color="error">{errorProfile.lastName}</Typography>}
+        </Grid>
+        <Grid item xs={2}>
+          {showLabels && <Typography>First Name</Typography>}
+          <TextField
+            name={`firstName-${name.id}`}
+            value={name.firstName}
+            onChange={(e) => handleChange(e, name.id, 'firstName')}
+            fullWidth
+            label={showLabels ? "First Name" : ""}
+          />
+          {errorProfile.firstName && <Typography color="error">{errorProfile.firstName}</Typography>}
+        </Grid>
+        <Grid item xs={2}>
+          {showLabels && <Typography>Middle Name</Typography>}
+          <TextField
+            name={`middleName-${name.id}`}
+            value={name.middleName}
+            onChange={(e) => handleChange(e, name.id, 'middleName')}
+            fullWidth
+            label={showLabels ? "Middle Name" : ""}
+          />
+        </Grid>
+        <Grid item xs={2}>
+          {showLabels && <Typography>Title</Typography>}
+          <FormControl fullWidth>
+            {showLabels && <InputLabel>Title</InputLabel>}
+            <Select
+              name={`title-${name.id}`}
+              value={name.title}
+              onChange={(e) => handleChange(e, name.id, 'title')}
+              label={showLabels ? "Title" : ""}
+            >
+              <MenuItem value="">Select title</MenuItem>
+              <MenuItem value="mr">Mr.</MenuItem>
+              <MenuItem value="mrs">Mrs.</MenuItem>
+              <MenuItem value="ms">Ms.</MenuItem>
+              <MenuItem value="dr">Dr.</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={1}>
+          <IconButton onClick={() => handleRemove(name.id)}>
+            <DeleteIcon />
+          </IconButton>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+};
+
+NameComponent.propTypes = {
+  name: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    type: PropTypes.string,
+    lastName: PropTypes.string,
+    firstName: PropTypes.string,
+    middleName: PropTypes.string,
+    title: PropTypes.string
+  }).isRequired,
+  handleChange: PropTypes.func.isRequired,
+  handleRemove: PropTypes.func.isRequired,
+  profileType: PropTypes.string.isRequired,
+  showLabels: PropTypes.bool.isRequired,
+  errorProfile: PropTypes.object.isRequired
+};
+
+export default NameComponent;
+
+
+import React from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { TextField, Typography, Box, Button, Grid } from '@mui/material';
+import { setRiskDetails, setRiskNextEnabled } from './riskDetailsReducer';
+
+const RiskDetails = () => {
+  const dispatch = useDispatch();
+  const { sourcelist, reason, reasonType, isNextEnabled } = useSelector((state) => state.riskDetails);
+  const [errorRiskDetails, setErrorRiskDetails] = React.useState({});
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    dispatch(setRiskDetails({ [name]: value.trim() }));
+    validateField(name, value.trim());
+  };
+
+  const validateField = (field, value) => {
+    let error = '';
+    if (!value || value.trim() === '') {
+      error = 'This field is required';
+    }
+
+    setErrorRiskDetails((prev) => ({ ...prev, [field]: error }));
+    validateForm();
+  };
+
+  const validateForm = () => {
+    const isValid = sourcelist && reason && reasonType;
+    dispatch(setRiskNextEnabled(isValid));
+  };
+
+  return (
+    <Box>
+      <Grid container spacing={2}>
+        <Grid item xs={4}>
+          <Typography>Sourcelist</Typography>
+          <TextField
+            name="sourcelist"
+            value={sourcelist}
+            onChange={handleChange}
+            fullWidth
+            label="Sourcelist"
+          />
+          {errorRiskDetails.sourcelist && <Typography color="error">{errorRiskDetails.sourcelist}</Typography>}
+        </Grid>
+        <Grid item xs={4}>
+          <Typography>Reason</Typography>
+          <TextField
+            name="reason"
+            value={reason}
+            onChange={handleChange}
+            fullWidth
+            label="Reason"
+          />
+          {errorRiskDetails.reason && <Typography color="error">{errorRiskDetails.reason}</Typography>}
+        </Grid>
+        <Grid item xs={4}>
+          <Typography>Reason Type</Typography>
+          <TextField
+            name="reasonType"
+            value={reasonType}
+            onChange={handleChange}
+            fullWidth
+            label="Reason Type"
+          />
+          {errorRiskDetails.reasonType && <Typography color="error">{errorRiskDetails.reasonType}</Typography>}
+        </Grid>
+      </Grid>
+    </Box>
+  );
+};
+
+export default RiskDetails;
+import React from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { TextField, Typography, Box, Grid } from '@mui/material';
+import { setAdditionalDetails, setAdditionalNextEnabled } from './additionalDetailsReducer';
+
+const AdditionalDetails = () => {
+  const dispatch = useDispatch();
+  const { idDetails, isNextEnabled } = useSelector((state) => state.additionalDetails);
+  const [errorAdditionalDetails, setErrorAdditionalDetails] = React.useState({});
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    dispatch(setAdditionalDetails({ [name]: value.trim() }));
+    validateField(name, value.trim());
+  };
+
+  const validateField = (field, value) => {
+    let error = '';
+    if (!value || value.trim() === '') {
+      error = 'This field is required';
+    }
+
+    setErrorAdditionalDetails((prev) => ({ ...prev, [field]: error }));
+    validateForm();
+  };
+
+  const validateForm = () => {
+    const isValid = idDetails;
+    dispatch(setAdditionalNextEnabled(isValid));
+  };
+
+  return (
+    <Box>
+      <Grid container spacing={2}>
+        <Grid item xs={4}>
+          <Typography>ID Details</Typography>
+          <TextField
+            name="idDetails"
+            value={idDetails}
+            onChange={handleChange}
+            fullWidth
+            label="ID Details"
+          />
+          {errorAdditionalDetails.idDetails && <Typography color="error">{errorAdditionalDetails.idDetails}</Typography>}
+        </Grid>
+      </Grid>
+    </Box>
+  );
+};
+
+export default AdditionalDetails;
+
+
+import React from 'react';
+import { useSelector } from 'react-redux';
+import { Stepper, Step, StepLabel, Button, Typography, Box } from '@mui/material';
+import CreateProfile from './CreateProfile';
+import RiskDetails from './RiskDetails';
+import AdditionalDetails from './AdditionalDetails';
+
+const steps = ['Name Details', 'Risk Details', 'Additional Details', 'Comments and Attachments'];
+
+const CreateProfileWrapper = () => {
+  const [activeStep, setActiveStep] = React.useState(0);
+  const isProfileNextEnabled = useSelector((state) => state.profile.isNextEnabled);
+  const isRiskNextEnabled = useSelector((state) => state.riskDetails.isNextEnabled);
+  const isAdditionalNextEnabled = useSelector((state) => state.additionalDetails.isNextEnabled);
+
+  const isNextEnabled = () => {
+    switch (activeStep) {
+      case 0:
+        return isProfileNextEnabled;
+      case 1:
+        return isRiskNextEnabled;
+      case 2:
+        return isAdditionalNextEnabled;
+      default:
+        return true;
+    }
+  };
+
+  const handleNext = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+  };
+
+  const handleBack = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep - 1);
+  };
+
+  return (
+    <Box sx={{ width: '100%' }}>
+      <Stepper activeStep={activeStep}>
+        {steps.map((label, index) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+      <div>
+        {activeStep === steps.length ? (
+          <Box sx={{ mt: 2, mb: 2 }}>
+            <Typography>All steps completed</Typography>
+          </Box>
+        ) : (
+          <div>
+            <Box sx={{ mt: 2, mb: 2 }}>
+              {activeStep === 0 && <CreateProfile />}
+              {activeStep === 1 && <RiskDetails />}
+              {activeStep === 2 && <AdditionalDetails />}
+            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'row', pt: 2 }}>
+              <Button
+                color="inherit"
+                disabled={activeStep === 0}
+                onClick={handleBack}
+                sx={{ mr: 1 }}
+              >
+                Back
+              </Button>
+              <Box sx={{ flex: '1 1 auto' }} />
+              <Button
+                variant="contained"
+                onClick={handleNext}
+                disabled={!isNextEnabled()}
+              >
+                {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
+              </Button>
+            </Box>
+          </div>
+        )}
+      </div>
+    </Box>
+  );
+};
+
+export default CreateProfileWrapper;
+
+
+//////// 3rd logic
+
+import React from 'react';
+import { useSelector } from 'react-redux';
+import { Stepper, Step, StepLabel, Button, Typography, Box } from '@mui/material';
+import CreateProfile from './CreateProfile';
+import RiskDetails from './RiskDetails';
+import AdditionalDetails from './AdditionalDetails';
+
+const steps = ['Name Details', 'Risk Details', 'Additional Details', 'Comments and Attachments'];
+
+const CreateProfileWrapper = () => {
+  const [activeStep, setActiveStep] = React.useState(0);
+
+  const profileNames = useSelector((state) => state.profile.names);
+  const riskDetails = useSelector((state) => state.riskDetails);
+  const additionalDetails = useSelector((state) => state.additionalDetails);
+
+  const isProfileNextEnabled = () => {
+    const primaryName = profileNames[0];
+    return primaryName.firstName.trim() !== '' && primaryName.lastName.trim() !== '' && primaryName.type.trim() !== '';
+  };
+
+  const isRiskNextEnabled = () => {
+    return riskDetails.sourcelist.trim() !== '' && riskDetails.reason.trim() !== '' && riskDetails.reasonType.trim() !== '';
+  };
+
+  const isAdditionalNextEnabled = () => {
+    return additionalDetails.idDetails.trim() !== '';
+  };
+
+  const isNextEnabled = () => {
+    switch (activeStep) {
+      case 0:
+        return isProfileNextEnabled();
+      case 1:
+        return isRiskNextEnabled();
+      case 2:
+        return isAdditionalNextEnabled();
+      default:
+        return true;
+    }
+  };
+
+  const handleNext = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+  };
+
+  const handleBack = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep - 1);
+  };
+
+  return (
+    <Box sx={{ width: '100%' }}>
+      <Stepper activeStep={activeStep}>
+        {steps.map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+      <div>
+        {activeStep === steps.length ? (
+          <Box sx={{ mt: 2, mb: 2 }}>
+            <Typography>All steps completed</Typography>
+          </Box>
+        ) : (
+          <div>
+            <Box sx={{ mt: 2, mb: 2 }}>
+              {activeStep === 0 && <CreateProfile />}
+              {activeStep === 1 && <RiskDetails />}
+              {activeStep === 2 && <AdditionalDetails />}
+            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'row', pt: 2 }}>
+              <Button
+                color="inherit"
+                disabled={activeStep === 0}
+                onClick={handleBack}
+                sx={{ mr: 1 }}
+              >
+                Back
+              </Button>
+              <Box sx={{ flex: '1 1 auto' }} />
+              <Button
+                variant="contained"
+                onClick={handleNext}
+                disabled={!isNextEnabled()}
+              >
+                {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
+              </Button>
+            </Box>
+          </div>
+        )}
+      </div>
+    </Box>
+  );
+};
+
+export default CreateProfileWrapper;
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { TextField, Select, MenuItem, Button, Grid, Typography, FormControl, InputLabel, Box } from '@mui/material';
+import { Add as AddIcon } from '@mui/icons-material';
+import { setNames } from './profileReducer';
+import NameComponent from './NameComponent';
+import generateRandomString from './generateRandomString'; // Assume you have a function to generate random strings
+
+const initialNameState = { id: generateRandomString(), type: '', lastName: '', firstName: '', middleName: '', title: '' };
+
+const CreateProfile = ({ profileType = "Person" }) => {
+  const dispatch = useDispatch();
+  const names = useSelector((state) => state.profile.names);
+  const [errorProfile, setErrorProfile] = useState({
+    firstName: '',
+    lastName: '',
+    type: ''
+  });
+
+  const handleChange = (e, id, field) => {
+    const value = e.target.value;
+    const newNames = names.map(name => name.id === id ? { ...name, [field]: value } : name);
+    dispatch(setNames(newNames));
+    validateField(field, value);
+  };
+
+  const handleAddOtherName = () => {
+    dispatch(setNames([...names, { ...initialNameState, id: generateRandomString() }]));
+  };
+
+  const validateField = (field, value) => {
+    let error = '';
+
+    if (!value.trim()) {
+      error = 'This field is required and cannot be empty spaces';
+    }
+
+    setErrorProfile((prev) => ({ ...prev, [field]: error }));
+  };
+
+  useEffect(() => {
+    validateForm();
+  }, [names]);
+
+  const validateForm = () => {
+    const primaryName = names[0];
+    const isValid = primaryName.firstName.trim() !== '' && primaryName.lastName.trim() !== '' && primaryName.type.trim() !== '';
+    // No need to set Redux state for form validation here
+  };
+
+  const isAddOtherNameEnabled = names[0].firstName.trim() !== '' && names[0].lastName.trim() !== '' && names[0].type.trim() !== '';
+
+  return (
+    <div style={{ padding: 20 }}>
+      <Typography variant="h5" gutterBottom>
+        Create a new profile for an individual
+      </Typography>
+      <Box mb={4}>
+        <Typography variant="h6" gutterBottom>
+          Primary Name
+        </Typography>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={2}>
+            <Typography>Last Name</Typography>
+            <TextField
+              name={`lastName-primary`}
+              value={names[0].lastName}
+              onChange={(e) => handleChange(e, names[0].id, 'lastName')}
+              fullWidth
+              label="Last Name"
+            />
+            {errorProfile.lastName && <Typography color="error">{errorProfile.lastName}</Typography>}
+          </Grid>
+          <Grid item xs={2}>
+            <Typography>First Name</Typography>
+            <TextField
+              name={`firstName-primary`}
+              value={names[0].firstName}
+              onChange={(e) => handleChange(e, names[0].id, 'firstName')}
+              fullWidth
+              label="First Name"
+            />
+            {errorProfile.firstName && <Typography color="error">{errorProfile.firstName}</Typography>}
+          </Grid>
+          <Grid item xs={2}>
+            <Typography>Middle Name</Typography>
+            <TextField
+              name={`middleName-primary`}
+              value={names[0].middleName}
+              onChange={(e) => handleChange(e, names[0].id, 'middleName')}
+              fullWidth
+              label="Middle Name"
+            />
+          </Grid>
+          <Grid item xs={2}>
+            <Typography>Title</Typography>
+            <FormControl fullWidth>
+              <InputLabel>Title</InputLabel>
+              <Select
+                name={`title-primary`}
+                value={names[0].title}
+                onChange={(e) => handleChange(e, names[0].id, 'title')}
+                label="Title"
+              >
+                <MenuItem value="">Select title</MenuItem>
+                <MenuItem value="mr">Mr.</MenuItem>
+                <MenuItem value="mrs">Mrs.</MenuItem>
+                <MenuItem value="ms">Ms.</MenuItem>
+                <MenuItem value="dr">Dr.</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Box>
+
+      <Typography variant="h6" gutterBottom>
+        Other Names
+      </Typography>
+      {names.slice(1).map((name, index) => (
+        <NameComponent
+          key={name.id}
+          name={name}
+          handleChange={handleChange}
+          profileType={profileType}
+          showLabels={index === 0}
+        />
+      ))}
+      <Button
+        variant="contained"
+        color="primary"
+        startIcon={<AddIcon />}
+        onClick={handleAddOtherName}
+        style={{ marginTop: 20 }}
+        disabled={!isAddOtherNameEnabled}
+      >
+        Add another name
+      </Button>
+    </div>
+  );
+};
+
+export default CreateProfile;
+
