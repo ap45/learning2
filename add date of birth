@@ -1,0 +1,286 @@
+///////  store/birthDetailsReducer.js
+
+const initialState = {
+  datesOfBirth: [{ id: 'initial-date', year: '', month: '', day: '' }],
+  placesOfBirth: [{ id: 'initial-place', country: '', city: '' }],
+};
+
+// Actions
+const ADD_DATE_OF_BIRTH = 'ADD_DATE_OF_BIRTH';
+const UPDATE_DATE_OF_BIRTH = 'UPDATE_DATE_OF_BIRTH';
+const REMOVE_DATE_OF_BIRTH = 'REMOVE_DATE_OF_BIRTH';
+
+const ADD_PLACE_OF_BIRTH = 'ADD_PLACE_OF_BIRTH';
+const UPDATE_PLACE_OF_BIRTH = 'UPDATE_PLACE_OF_BIRTH';
+const REMOVE_PLACE_OF_BIRTH = 'REMOVE_PLACE_OF_BIRTH';
+
+// Action creators
+export const addDateOfBirth = () => ({
+  type: ADD_DATE_OF_BIRTH,
+  payload: { id: generateRandomString(), year: '', month: '', day: '' },
+});
+
+export const updateDateOfBirth = (id, field, value) => ({
+  type: UPDATE_DATE_OF_BIRTH,
+  payload: { id, field, value },
+});
+
+export const removeDateOfBirth = (id) => ({
+  type: REMOVE_DATE_OF_BIRTH,
+  payload: id,
+});
+
+export const addPlaceOfBirth = () => ({
+  type: ADD_PLACE_OF_BIRTH,
+  payload: { id: generateRandomString(), country: '', city: '' },
+});
+
+export const updatePlaceOfBirth = (id, field, value) => ({
+  type: UPDATE_PLACE_OF_BIRTH,
+  payload: { id, field, value },
+});
+
+export const removePlaceOfBirth = (id) => ({
+  type: REMOVE_PLACE_OF_BIRTH,
+  payload: id,
+});
+
+// Reducer
+const birthDetailsReducer = (state = initialState, action) => {
+  switch (action.type) {
+    case ADD_DATE_OF_BIRTH:
+      return {
+        ...state,
+        datesOfBirth: [...state.datesOfBirth, action.payload],
+      };
+    case UPDATE_DATE_OF_BIRTH:
+      return {
+        ...state,
+        datesOfBirth: state.datesOfBirth.map((dob) =>
+          dob.id === action.payload.id ? { ...dob, [action.payload.field]: action.payload.value } : dob
+        ),
+      };
+    case REMOVE_DATE_OF_BIRTH:
+      return {
+        ...state,
+        datesOfBirth: state.datesOfBirth.length > 1 ? state.datesOfBirth.filter((dob) => dob.id !== action.payload) : state.datesOfBirth,
+      };
+    case ADD_PLACE_OF_BIRTH:
+      return {
+        ...state,
+        placesOfBirth: [...state.placesOfBirth, action.payload],
+      };
+    case UPDATE_PLACE_OF_BIRTH:
+      return {
+        ...state,
+        placesOfBirth: state.placesOfBirth.map((pob) =>
+          pob.id === action.payload.id ? { ...pob, [action.payload.field]: action.payload.value } : pob
+        ),
+      };
+    case REMOVE_PLACE_OF_BIRTH:
+      return {
+        ...state,
+        placesOfBirth: state.placesOfBirth.length > 1 ? state.placesOfBirth.filter((pob) => pob.id !== action.payload) : state.placesOfBirth,
+      };
+    default:
+      return state;
+  }
+};
+
+export default birthDetailsReducer;
+
+function generateRandomString() {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+
+
+
+import React, { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Button, Grid, Typography, Box, TextField, FormControl, InputLabel, Select, MenuItem, IconButton } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { addDateOfBirth, updateDateOfBirth, removeDateOfBirth, addPlaceOfBirth, updatePlaceOfBirth, removePlaceOfBirth } from '../store/birthDetailsReducer';
+
+const BirthDetails = () => {
+  const dispatch = useDispatch();
+  const datesOfBirth = useSelector((state) => state.birthDetails.datesOfBirth);
+  const placesOfBirth = useSelector((state) => state.birthDetails.placesOfBirth);
+  const [errorBirth, setErrorBirth] = useState({
+    datesOfBirth: {},
+    placesOfBirth: {},
+  });
+
+  const handleDateOfBirthChange = (id, field, value) => {
+    dispatch(updateDateOfBirth(id, field, value));
+    validateDateOfBirth(id, { ...datesOfBirth.find((dob) => dob.id === id), [field]: value });
+  };
+
+  const handlePlaceOfBirthChange = (id, field, value) => {
+    dispatch(updatePlaceOfBirth(id, field, value));
+    validatePlaceOfBirth(id, { ...placesOfBirth.find((pob) => pob.id === id), [field]: value });
+  };
+
+  const validateDateOfBirth = (id, dob) => {
+    let errors = errorBirth.datesOfBirth[id] || {};
+    if (!dob.year.trim()) {
+      errors.year = "Year is required and cannot be empty or spaces";
+    }
+    if (!dob.month.trim()) {
+      errors.month = "Month is required and cannot be empty or spaces";
+    }
+    if (!dob.day.trim()) {
+      errors.day = "Day is required and cannot be empty or spaces";
+    }
+    setErrorBirth((prev) => ({ ...prev, datesOfBirth: { ...prev.datesOfBirth, [id]: errors } }));
+  };
+
+  const validatePlaceOfBirth = (id, pob) => {
+    let errors = errorBirth.placesOfBirth[id] || {};
+    if (!pob.country.trim()) {
+      errors.country = "Country is required and cannot be empty or spaces";
+    }
+    if (!pob.city.trim()) {
+      errors.city = "City is required and cannot be empty or spaces";
+    }
+    setErrorBirth((prev) => ({ ...prev, placesOfBirth: { ...prev.placesOfBirth, [id]: errors } }));
+  };
+
+  const addNewDateOfBirth = () => {
+    dispatch(addDateOfBirth());
+  };
+
+  const addNewPlaceOfBirth = () => {
+    dispatch(addPlaceOfBirth());
+  };
+
+  return (
+    <Box>
+      <Typography variant="h6" gutterBottom>
+        Birth Details
+      </Typography>
+      <Box mb={4}>
+        {datesOfBirth.map((dob, index) => (
+          <Grid container spacing={2} alignItems="center" key={dob.id}>
+            <Grid item xs={3}>
+              <TextField
+                name="year"
+                value={dob.year}
+                onChange={(e) => handleDateOfBirthChange(dob.id, 'year', e.target.value)}
+                fullWidth
+                label="Enter year"
+                error={!!errorBirth.datesOfBirth[dob.id]?.year}
+                helperText={errorBirth.datesOfBirth[dob.id]?.year}
+              />
+            </Grid>
+            <Grid item xs={3}>
+              <FormControl fullWidth>
+                <InputLabel>Select month</InputLabel>
+                <Select
+                  name="month"
+                  value={dob.month}
+                  onChange={(e) => handleDateOfBirthChange(dob.id, 'month', e.target.value)}
+                  label="Select month"
+                  error={!!errorBirth.datesOfBirth[dob.id]?.month}
+                >
+                  <MenuItem value="">Select month</MenuItem>
+                  <MenuItem value="January">January</MenuItem>
+                  <MenuItem value="February">February</MenuItem>
+                  <MenuItem value="March">March</MenuItem>
+                  <MenuItem value="April">April</MenuItem>
+                  <MenuItem value="May">May</MenuItem>
+                  <MenuItem value="June">June</MenuItem>
+                  <MenuItem value="July">July</MenuItem>
+                  <MenuItem value="August">August</MenuItem>
+                  <MenuItem value="September">September</MenuItem>
+                  <MenuItem value="October">October</MenuItem>
+                  <MenuItem value="November">November</MenuItem>
+                  <MenuItem value="December">December</MenuItem>
+                </Select>
+                {errorBirth.datesOfBirth[dob.id]?.month && (
+                  <Typography color="error">{errorBirth.datesOfBirth[dob.id]?.month}</Typography>
+                )}
+              </FormControl>
+            </Grid>
+            <Grid item xs={3}>
+              <TextField
+                name="day"
+                value={dob.day}
+                onChange={(e) => handleDateOfBirthChange(dob.id, 'day', e.target.value)}
+                fullWidth
+                label="Enter day"
+                error={!!errorBirth.datesOfBirth[dob.id]?.day}
+                helperText={errorBirth.datesOfBirth[dob.id]?.day}
+              />
+            </Grid>
+            <Grid item xs={1}>
+              {index > 0 && (
+                <IconButton onClick={() => dispatch(removeDateOfBirth(dob.id))}>
+                  <DeleteIcon />
+                </IconButton>
+              )}
+            </Grid>
+          </Grid>
+        ))}
+        <Button variant="outlined" onClick={addNewDateOfBirth}>
+          + Add another date
+        </Button>
+      </Box>
+
+      <Box mb={4}>
+        {placesOfBirth.map((pob, index) => (
+          <Grid container spacing={2} alignItems="center" key={pob.id}>
+            <Grid item xs={5}>
+              <FormControl fullWidth>
+                <InputLabel>Select country</InputLabel>
+                <Select
+                  name="country"
+                  value={pob.country}
+                  onChange={(e) => handlePlaceOfBirthChange(pob.id, 'country', e.target.value)}
+                  label="Select country"
+                  error={!!errorBirth.placesOfBirth[pob.id]?.country}
+                >
+                  <MenuItem value="">Select country</MenuItem>
+                  <MenuItem value="USA">USA</MenuItem>
+                  <MenuItem value="Canada">Canada</MenuItem>
+                  <MenuItem value="UK">UK</MenuItem>
+                  <MenuItem value="Australia">Australia</MenuItem>
+                  <MenuItem value="India">India</MenuItem>
+                  <MenuItem value="China">China</MenuItem>
+                  <MenuItem value="Germany">Germany</MenuItem>
+                </Select>
+                {errorBirth.placesOfBirth[pob.id]?.country && (
+                  <Typography color="error">{errorBirth.placesOfBirth[pob.id]?.country}</Typography>
+                )}
+              </FormControl>
+            </Grid>
+            <Grid item xs={5}>
+              <TextField
+                name="city"
+                value={pob.city}
+                onChange={(e) => handlePlaceOfBirthChange(pob.id, 'city', e.target.value)}
+                fullWidth
+                label="Enter city"
+                error={!!errorBirth.placesOfBirth[pob.id]?.city}
+                helperText={errorBirth.placesOfBirth[pob.id]?.city}
+              />
+            </Grid>
+            <Grid item xs={1}>
+              {index > 0 && (
+                <IconButton onClick={() => dispatch(removePlaceOfBirth(pob.id))}>
+                  <DeleteIcon />
+                </IconButton>
+              )}
+            </Grid>
+          </Grid>
+        ))}
+        <Button variant="outlined" onClick={addNewPlaceOfBirth}>
+          + Add another place
+        </Button>
+      </Box>
+    </Box>
+  );
+};
+
+export default BirthDetails;
+
