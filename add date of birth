@@ -1,18 +1,16 @@
-///////  store/birthDetailsReducer.js
+//// 1st logic
+
+////reduxx
 
 const initialState = {
-  datesOfBirth: [{ id: 'initial-date', year: '', month: '', day: '' }],
-  placesOfBirth: [{ id: 'initial-place', country: '', city: '' }],
+  datesOfBirth: [{ id: generateRandomString(), year: '', month: '', day: '' }],
+  placesOfBirth: [{ id: generateRandomString(), country: '', city: '' }],
 };
 
 // Actions
 const ADD_DATE_OF_BIRTH = 'ADD_DATE_OF_BIRTH';
-const UPDATE_DATE_OF_BIRTH = 'UPDATE_DATE_OF_BIRTH';
 const REMOVE_DATE_OF_BIRTH = 'REMOVE_DATE_OF_BIRTH';
-
-const ADD_PLACE_OF_BIRTH = 'ADD_PLACE_OF_BIRTH';
-const UPDATE_PLACE_OF_BIRTH = 'UPDATE_PLACE_OF_BIRTH';
-const REMOVE_PLACE_OF_BIRTH = 'REMOVE_PLACE_OF_BIRTH';
+const UPDATE_DATE_OF_BIRTH = 'UPDATE_DATE_OF_BIRTH';
 
 // Action creators
 export const addDateOfBirth = () => ({
@@ -20,28 +18,13 @@ export const addDateOfBirth = () => ({
   payload: { id: generateRandomString(), year: '', month: '', day: '' },
 });
 
-export const updateDateOfBirth = (id, field, value) => ({
+export const updateDateOfBirth = (dob) => ({
   type: UPDATE_DATE_OF_BIRTH,
-  payload: { id, field, value },
+  payload: dob,
 });
 
 export const removeDateOfBirth = (id) => ({
   type: REMOVE_DATE_OF_BIRTH,
-  payload: id,
-});
-
-export const addPlaceOfBirth = () => ({
-  type: ADD_PLACE_OF_BIRTH,
-  payload: { id: generateRandomString(), country: '', city: '' },
-});
-
-export const updatePlaceOfBirth = (id, field, value) => ({
-  type: UPDATE_PLACE_OF_BIRTH,
-  payload: { id, field, value },
-});
-
-export const removePlaceOfBirth = (id) => ({
-  type: REMOVE_PLACE_OF_BIRTH,
   payload: id,
 });
 
@@ -57,30 +40,15 @@ const birthDetailsReducer = (state = initialState, action) => {
       return {
         ...state,
         datesOfBirth: state.datesOfBirth.map((dob) =>
-          dob.id === action.payload.id ? { ...dob, [action.payload.field]: action.payload.value } : dob
+          dob.id === action.payload.id ? action.payload : dob
         ),
       };
     case REMOVE_DATE_OF_BIRTH:
       return {
         ...state,
-        datesOfBirth: state.datesOfBirth.length > 1 ? state.datesOfBirth.filter((dob) => dob.id !== action.payload) : state.datesOfBirth,
-      };
-    case ADD_PLACE_OF_BIRTH:
-      return {
-        ...state,
-        placesOfBirth: [...state.placesOfBirth, action.payload],
-      };
-    case UPDATE_PLACE_OF_BIRTH:
-      return {
-        ...state,
-        placesOfBirth: state.placesOfBirth.map((pob) =>
-          pob.id === action.payload.id ? { ...pob, [action.payload.field]: action.payload.value } : pob
-        ),
-      };
-    case REMOVE_PLACE_OF_BIRTH:
-      return {
-        ...state,
-        placesOfBirth: state.placesOfBirth.length > 1 ? state.placesOfBirth.filter((pob) => pob.id !== action.payload) : state.placesOfBirth,
+        datesOfBirth: state.datesOfBirth.length > 1
+          ? state.datesOfBirth.filter((dob) => dob.id !== action.payload)
+          : state.datesOfBirth,
       };
     default:
       return state;
@@ -95,192 +63,325 @@ function generateRandomString() {
 
 
 
-
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Button, Grid, Typography, Box, TextField, FormControl, InputLabel, Select, MenuItem, IconButton } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { addDateOfBirth, updateDateOfBirth, removeDateOfBirth, addPlaceOfBirth, updatePlaceOfBirth, removePlaceOfBirth } from '../store/birthDetailsReducer';
+import { addDateOfBirth, updateDateOfBirth, removeDateOfBirth } from '../store/birthDetailsReducer';
 
-const BirthDetails = () => {
+const DateOfBirthDetails = () => {
   const dispatch = useDispatch();
   const datesOfBirth = useSelector((state) => state.birthDetails.datesOfBirth);
-  const placesOfBirth = useSelector((state) => state.birthDetails.placesOfBirth);
-  const [errorBirth, setErrorBirth] = useState({
-    datesOfBirth: {},
-    placesOfBirth: {},
-  });
+  const [errorBirth, setErrorBirth] = useState({});
 
   const handleDateOfBirthChange = (id, field, value) => {
-    dispatch(updateDateOfBirth(id, field, value));
-    validateDateOfBirth(id, { ...datesOfBirth.find((dob) => dob.id === id), [field]: value });
+    const updatedDOB = datesOfBirth.find(dob => dob.id === id);
+    updatedDOB[field] = value;
+    setErrorBirth((prevErrors) => ({ ...prevErrors, [id]: {} })); // Clear previous errors
   };
 
-  const handlePlaceOfBirthChange = (id, field, value) => {
-    dispatch(updatePlaceOfBirth(id, field, value));
-    validatePlaceOfBirth(id, { ...placesOfBirth.find((pob) => pob.id === id), [field]: value });
+  const handleDateOfBirthBlur = (id) => {
+    const errors = validateDateOfBirth(id);
+    setErrorBirth((prevErrors) => ({ ...prevErrors, [id]: errors }));
+
+    if (Object.keys(errors).length === 0) {
+      const updatedDOB = datesOfBirth.find(dob => dob.id === id);
+      dispatch(updateDateOfBirth({ ...updatedDOB }));
+    }
   };
 
-  const validateDateOfBirth = (id, dob) => {
-    let errors = errorBirth.datesOfBirth[id] || {};
-    if (!dob.year.trim()) {
-      errors.year = "Year is required and cannot be empty or spaces";
-    }
-    if (!dob.month.trim()) {
-      errors.month = "Month is required and cannot be empty or spaces";
-    }
-    if (!dob.day.trim()) {
-      errors.day = "Day is required and cannot be empty or spaces";
-    }
-    setErrorBirth((prev) => ({ ...prev, datesOfBirth: { ...prev.datesOfBirth, [id]: errors } }));
-  };
+  const validateDateOfBirth = (id) => {
+    let errors = {};
+    const dob = datesOfBirth.find(d => d.id === id);
 
-  const validatePlaceOfBirth = (id, pob) => {
-    let errors = errorBirth.placesOfBirth[id] || {};
-    if (!pob.country.trim()) {
-      errors.country = "Country is required and cannot be empty or spaces";
-    }
-    if (!pob.city.trim()) {
-      errors.city = "City is required and cannot be empty or spaces";
-    }
-    setErrorBirth((prev) => ({ ...prev, placesOfBirth: { ...prev.placesOfBirth, [id]: errors } }));
-  };
+    const { year, month, day } = dob;
+    const dateStr = `${year}-${month}-${day}`;
+    const dateObj = new Date(dateStr);
 
-  const addNewDateOfBirth = () => {
-    dispatch(addDateOfBirth());
-  };
+    if (year && (isNaN(year) || year < 1900 || year > new Date().getFullYear())) {
+      errors.year = 'Year must be a valid number between 1900 and the current year';
+    }
+    if (month && (isNaN(month) || month < 1 || month > 12)) {
+      errors.month = 'Month must be a valid number between 1 and 12';
+    }
+    if (day && (isNaN(day) || day < 1 || day > 31)) {
+      errors.day = 'Day must be a valid number between 1 and 31';
+    }
+    if (dateObj > new Date()) {
+      errors.year = 'Date cannot be in the future';
+    }
+    if (dateObj < new Date('1900-01-01')) {
+      errors.year = 'Date cannot be before 01-01-1900';
+    }
 
-  const addNewPlaceOfBirth = () => {
-    dispatch(addPlaceOfBirth());
+    // Check for duplicate entries
+    if (
+      datesOfBirth.some(
+        (existingDOB) =>
+          existingDOB.id !== dob.id &&
+          existingDOB.year === year &&
+          (!existingDOB.month || existingDOB.month === month) &&
+          (!existingDOB.day || existingDOB.day === day)
+      )
+    ) {
+      errors.year = 'Duplicate date of birth entry';
+    }
+
+    return errors;
   };
 
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
-        Birth Details
+        Date of Birth Details
       </Typography>
-      <Box mb={4}>
-        {datesOfBirth.map((dob, index) => (
-          <Grid container spacing={2} alignItems="center" key={dob.id}>
-            <Grid item xs={3}>
-              <TextField
-                name="year"
-                value={dob.year}
-                onChange={(e) => handleDateOfBirthChange(dob.id, 'year', e.target.value)}
-                fullWidth
-                label="Enter year"
-                error={!!errorBirth.datesOfBirth[dob.id]?.year}
-                helperText={errorBirth.datesOfBirth[dob.id]?.year}
-              />
-            </Grid>
-            <Grid item xs={3}>
-              <FormControl fullWidth>
-                <InputLabel>Select month</InputLabel>
-                <Select
-                  name="month"
-                  value={dob.month}
-                  onChange={(e) => handleDateOfBirthChange(dob.id, 'month', e.target.value)}
-                  label="Select month"
-                  error={!!errorBirth.datesOfBirth[dob.id]?.month}
-                >
-                  <MenuItem value="">Select month</MenuItem>
-                  <MenuItem value="January">January</MenuItem>
-                  <MenuItem value="February">February</MenuItem>
-                  <MenuItem value="March">March</MenuItem>
-                  <MenuItem value="April">April</MenuItem>
-                  <MenuItem value="May">May</MenuItem>
-                  <MenuItem value="June">June</MenuItem>
-                  <MenuItem value="July">July</MenuItem>
-                  <MenuItem value="August">August</MenuItem>
-                  <MenuItem value="September">September</MenuItem>
-                  <MenuItem value="October">October</MenuItem>
-                  <MenuItem value="November">November</MenuItem>
-                  <MenuItem value="December">December</MenuItem>
-                </Select>
-                {errorBirth.datesOfBirth[dob.id]?.month && (
-                  <Typography color="error">{errorBirth.datesOfBirth[dob.id]?.month}</Typography>
-                )}
-              </FormControl>
-            </Grid>
-            <Grid item xs={3}>
-              <TextField
-                name="day"
-                value={dob.day}
-                onChange={(e) => handleDateOfBirthChange(dob.id, 'day', e.target.value)}
-                fullWidth
-                label="Enter day"
-                error={!!errorBirth.datesOfBirth[dob.id]?.day}
-                helperText={errorBirth.datesOfBirth[dob.id]?.day}
-              />
-            </Grid>
-            <Grid item xs={1}>
-              {index > 0 && (
-                <IconButton onClick={() => dispatch(removeDateOfBirth(dob.id))}>
-                  <DeleteIcon />
-                </IconButton>
-              )}
-            </Grid>
+      {datesOfBirth.map((dob, index) => (
+        <Grid container spacing={2} alignItems="center" key={dob.id}>
+          <Grid item xs={3}>
+            <TextField
+              name="year"
+              value={dob.year}
+              onChange={(e) => handleDateOfBirthChange(dob.id, 'year', e.target.value)}
+              onBlur={() => handleDateOfBirthBlur(dob.id)}
+              fullWidth
+              label="Enter year"
+              error={!!errorBirth[dob.id]?.year}
+              helperText={errorBirth[dob.id]?.year}
+            />
           </Grid>
-        ))}
-        <Button variant="outlined" onClick={addNewDateOfBirth}>
-          + Add another date
-        </Button>
-      </Box>
-
-      <Box mb={4}>
-        {placesOfBirth.map((pob, index) => (
-          <Grid container spacing={2} alignItems="center" key={pob.id}>
-            <Grid item xs={5}>
-              <FormControl fullWidth>
-                <InputLabel>Select country</InputLabel>
-                <Select
-                  name="country"
-                  value={pob.country}
-                  onChange={(e) => handlePlaceOfBirthChange(pob.id, 'country', e.target.value)}
-                  label="Select country"
-                  error={!!errorBirth.placesOfBirth[pob.id]?.country}
-                >
-                  <MenuItem value="">Select country</MenuItem>
-                  <MenuItem value="USA">USA</MenuItem>
-                  <MenuItem value="Canada">Canada</MenuItem>
-                  <MenuItem value="UK">UK</MenuItem>
-                  <MenuItem value="Australia">Australia</MenuItem>
-                  <MenuItem value="India">India</MenuItem>
-                  <MenuItem value="China">China</MenuItem>
-                  <MenuItem value="Germany">Germany</MenuItem>
-                </Select>
-                {errorBirth.placesOfBirth[pob.id]?.country && (
-                  <Typography color="error">{errorBirth.placesOfBirth[pob.id]?.country}</Typography>
-                )}
-              </FormControl>
-            </Grid>
-            <Grid item xs={5}>
-              <TextField
-                name="city"
-                value={pob.city}
-                onChange={(e) => handlePlaceOfBirthChange(pob.id, 'city', e.target.value)}
-                fullWidth
-                label="Enter city"
-                error={!!errorBirth.placesOfBirth[pob.id]?.city}
-                helperText={errorBirth.placesOfBirth[pob.id]?.city}
-              />
-            </Grid>
-            <Grid item xs={1}>
-              {index > 0 && (
-                <IconButton onClick={() => dispatch(removePlaceOfBirth(pob.id))}>
-                  <DeleteIcon />
-                </IconButton>
+          <Grid item xs={3}>
+            <FormControl fullWidth>
+              <InputLabel>Select month</InputLabel>
+              <Select
+                name="month"
+                value={dob.month}
+                onChange={(e) => handleDateOfBirthChange(dob.id, 'month', e.target.value)}
+                onBlur={() => handleDateOfBirthBlur(dob.id)}
+                label="Select month"
+                error={!!errorBirth[dob.id]?.month}
+              >
+                <MenuItem value="">Select month</MenuItem>
+                <MenuItem value="1">January</MenuItem>
+                <MenuItem value="2">February</MenuItem>
+                <MenuItem value="3">March</MenuItem>
+                <MenuItem value="4">April</MenuItem>
+                <MenuItem value="5">May</MenuItem>
+                <MenuItem value="6">June</MenuItem>
+                <MenuItem value="7">July</MenuItem>
+                <MenuItem value="8">August</MenuItem>
+                <MenuItem value="9">September</MenuItem>
+                <MenuItem value="10">October</MenuItem>
+                <MenuItem value="11">November</MenuItem>
+                <MenuItem value="12">December</MenuItem>
+              </Select>
+              {errorBirth[dob.id]?.month && (
+                <Typography color="error">{errorBirth[dob.id]?.month}</Typography>
               )}
-            </Grid>
+            </FormControl>
           </Grid>
-        ))}
-        <Button variant="outlined" onClick={addNewPlaceOfBirth}>
-          + Add another place
-        </Button>
-      </Box>
+          <Grid item xs={3}>
+            <TextField
+              name="day"
+              value={dob.day}
+              onChange={(e) => handleDateOfBirthChange(dob.id, 'day', e.target.value)}
+              onBlur={() => handleDateOfBirthBlur(dob.id)}
+              fullWidth
+              label="Enter day"
+              error={!!errorBirth[dob.id]?.day}
+              helperText={errorBirth[dob.id]?.day}
+            />
+          </Grid>
+          <Grid item xs={1}>
+            {datesOfBirth.length > 1 && (
+              <IconButton onClick={() => dispatch(removeDateOfBirth(dob.id))}>
+                <DeleteIcon />
+              </IconButton>
+            )}
+          </Grid>
+        </Grid>
+      ))}
+      <Button variant="outlined" onClick={() => dispatch(addDateOfBirth())}>
+        + Add another date
+      </Button>
     </Box>
   );
 };
 
-export default BirthDetails;
+export default DateOfBirthDetails;
 
+
+
+
+/////2nd logic 
+
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Button, Grid, Typography, Box, TextField, FormControl, InputLabel, Select, MenuItem, IconButton } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { addDateOfBirth, updateDateOfBirth, removeDateOfBirth } from '../store/birthDetailsReducer';
+
+const DateOfBirthDetails = () => {
+  const dispatch = useDispatch();
+  const datesOfBirth = useSelector((state) => state.birthDetails.datesOfBirth);
+  const [localDates, setLocalDates] = useState(datesOfBirth);
+  const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    setLocalDates(datesOfBirth);
+  }, [datesOfBirth]);
+
+  const handleChange = (id, field, value) => {
+    const updatedDates = localDates.map((dob) => {
+      if (dob.id === id) {
+        return { ...dob, [field]: value };
+      }
+      return dob;
+    });
+    setLocalDates(updatedDates);
+  };
+
+  const handleBlur = (id) => {
+    const errors = validateDateOfBirth(id);
+    setErrors((prevErrors) => ({ ...prevErrors, [id]: errors }));
+
+    if (Object.keys(errors).length === 0) {
+      const validDOB = localDates.find((dob) => dob.id === id);
+      dispatch(updateDateOfBirth(validDOB));
+    }
+  };
+
+  const validateDateOfBirth = (id) => {
+    const errors = {};
+    const dob = localDates.find((d) => d.id === id);
+
+    const { year, month, day } = dob;
+    const dateStr = `${year}-${month}-${day}`;
+    const dateObj = new Date(dateStr);
+
+    if (year && (isNaN(year) || year < 1900 || year > new Date().getFullYear())) {
+      errors.year = 'Year must be a valid number between 1900 and the current year';
+    }
+    if (month && (isNaN(month) || month < 1 || month > 12)) {
+      errors.month = 'Month must be a valid number between 1 and 12';
+    }
+    if (day && (isNaN(day) || day < 1 || day > 31)) {
+      errors.day = 'Day must be a valid number between 1 and 31';
+    }
+    if (dateObj > new Date()) {
+      errors.year = 'Date cannot be in the future';
+    }
+    if (dateObj < new Date('1900-01-01')) {
+      errors.year = 'Date cannot be before 01-01-1900';
+    }
+
+    // Check for duplicate entries
+    if (
+      localDates.some(
+        (existingDOB) =>
+          existingDOB.id !== dob.id &&
+          existingDOB.year === year &&
+          (!existingDOB.month || existingDOB.month === month) &&
+          (!existingDOB.day || existingDOB.day === day)
+      )
+    ) {
+      errors.year = 'Duplicate date of birth entry';
+    }
+
+    return errors;
+  };
+
+  const addNewDateOfBirth = () => {
+    setLocalDates([
+      ...localDates,
+      { id: generateRandomString(), year: '', month: '', day: '' },
+    ]);
+  };
+
+  const deleteDateOfBirth = (id) => {
+    const updatedDates = localDates.filter((dob) => dob.id !== id);
+    setLocalDates(updatedDates);
+    dispatch(removeDateOfBirth(id));
+  };
+
+  return (
+    <Box>
+      <Typography variant="h6" gutterBottom>
+        Date of Birth Details
+      </Typography>
+      {localDates.map((dob, index) => (
+        <Grid container spacing={2} alignItems="center" key={dob.id}>
+          <Grid item xs={3}>
+            <TextField
+              name="year"
+              value={dob.year}
+              onChange={(e) => handleChange(dob.id, 'year', e.target.value)}
+              onBlur={() => handleBlur(dob.id)}
+              fullWidth
+              label="Enter year"
+              error={!!errors[dob.id]?.year}
+              helperText={errors[dob.id]?.year}
+            />
+          </Grid>
+          <Grid item xs={3}>
+            <FormControl fullWidth>
+              <InputLabel>Select month</InputLabel>
+              <Select
+                name="month"
+                value={dob.month}
+                onChange={(e) => handleChange(dob.id, 'month', e.target.value)}
+                onBlur={() => handleBlur(dob.id)}
+                label="Select month"
+                error={!!errors[dob.id]?.month}
+              >
+                <MenuItem value="">Select month</MenuItem>
+                <MenuItem value="1">January</MenuItem>
+                <MenuItem value="2">February</MenuItem>
+                <MenuItem value="3">March</MenuItem>
+                <MenuItem value="4">April</MenuItem>
+                <MenuItem value="5">May</MenuItem>
+                <MenuItem value="6">June</MenuItem>
+                <MenuItem value="7">July</MenuItem>
+                <MenuItem value="8">August</MenuItem>
+                <MenuItem value="9">September</MenuItem>
+                <MenuItem value="10">October</MenuItem>
+                <MenuItem value="11">November</MenuItem>
+                <MenuItem value="12">December</MenuItem>
+              </Select>
+              {errors[dob.id]?.month && (
+                <Typography color="error">{errors[dob.id]?.month}</Typography>
+              )}
+            </FormControl>
+          </Grid>
+          <Grid item xs={3}>
+            <TextField
+              name="day"
+              value={dob.day}
+              onChange={(e) => handleChange(dob.id, 'day', e.target.value)}
+              onBlur={() => handleBlur(dob.id)}
+              fullWidth
+              label="Enter day"
+              error={!!errors[dob.id]?.day}
+              helperText={errors[dob.id]?.day}
+            />
+          </Grid>
+          <Grid item xs={1}>
+            {localDates.length > 1 && (
+              <IconButton onClick={() => deleteDateOfBirth(dob.id)}>
+                <DeleteIcon />
+              </IconButton>
+            )}
+          </Grid>
+        </Grid>
+      ))}
+      <Button variant="outlined" onClick={addNewDateOfBirth}>
+        + Add another date
+      </Button>
+    </Box>
+  );
+};
+
+export default DateOfBirthDetails;
+
+function generateRandomString() {
+  return Math.random().toString(36).substr(2, 9);
+}
