@@ -485,3 +485,97 @@ const PlaceOfBirthDetails = () => {
 
 export default PlaceOfBirthDetails;
 
+
+const initialState = {
+  datesOfBirth: [{ id: 'initial-date', year: '', month: '', day: '' }],
+  placesOfBirth: [{ id: 'initial-place', country: '', city: '' }],
+};
+
+// Actions
+const ADD_DATE_OF_BIRTH = 'ADD_DATE_OF_BIRTH';
+const UPDATE_DATE_OF_BIRTH = 'UPDATE_DATE_OF_BIRTH';
+const REMOVE_DATE_OF_BIRTH = 'REMOVE_DATE_OF_BIRTH';
+
+const ADD_PLACE_OF_BIRTH = 'ADD_PLACE_OF_BIRTH';
+const UPDATE_PLACE_OF_BIRTH = 'UPDATE_PLACE_OF_BIRTH';
+const REMOVE_PLACE_OF_BIRTH = 'REMOVE_PLACE_OF_BIRTH';
+
+// Action creators
+export const addDateOfBirth = () => ({
+  type: ADD_DATE_OF_BIRTH,
+  payload: { id: generateRandomString(), year: '', month: '', day: '' },
+});
+
+export const updateDateOfBirth = (id, field, value) => ({
+  type: UPDATE_DATE_OF_BIRTH,
+  payload: { id, field, value },
+});
+
+export const removeDateOfBirth = (id) => ({
+  type: REMOVE_DATE_OF_BIRTH,
+  payload: id,
+});
+
+export const addPlaceOfBirth = () => ({
+  type: ADD_PLACE_OF_BIRTH,
+  payload: { id: generateRandomString(), country: '', city: '' },
+});
+
+export const updatePlaceOfBirth = (id, field, value) => ({
+  type: UPDATE_PLACE_OF_BIRTH,
+  payload: { id, field, value },
+});
+
+export const removePlaceOfBirth = (id) => ({
+  type: REMOVE_PLACE_OF_BIRTH,
+  payload: id,
+});
+
+// Reducer
+const birthDetailsReducer = (state = initialState, action) => {
+  switch (action.type) {
+    case ADD_DATE_OF_BIRTH:
+      return {
+        ...state,
+        datesOfBirth: [...state.datesOfBirth, action.payload],
+      };
+    case UPDATE_DATE_OF_BIRTH:
+      return {
+        ...state,
+        datesOfBirth: state.datesOfBirth.map((dob) =>
+          dob.id === action.payload.id ? { ...dob, [action.payload.field]: action.payload.value } : dob
+        ),
+      };
+    case REMOVE_DATE_OF_BIRTH:
+      return {
+        ...state,
+        datesOfBirth: state.datesOfBirth.length > 1 ? state.datesOfBirth.filter((dob) => dob.id !== action.payload) : state.datesOfBirth,
+      };
+    case ADD_PLACE_OF_BIRTH:
+      return {
+        ...state,
+        placesOfBirth: [...state.placesOfBirth, action.payload],
+      };
+    case UPDATE_PLACE_OF_BIRTH:
+      return {
+        ...state,
+        placesOfBirth: state.placesOfBirth.map((pob) =>
+          pob.id === action.payload.id ? { ...pob, [action.payload.field]: action.payload.value } : pob
+        ),
+      };
+    case REMOVE_PLACE_OF_BIRTH:
+      return {
+        ...state,
+        placesOfBirth: state.placesOfBirth.length > 1 ? state.placesOfBirth.filter((pob) => pob.id !== action.payload) : state.placesOfBirth,
+      };
+    default:
+      return state;
+  }
+};
+
+export default birthDetailsReducer;
+
+function generateRandomString() {
+  return Math.random().toString(36).substr(2, 9);
+}
+
