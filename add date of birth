@@ -385,3 +385,103 @@ export default DateOfBirthDetails;
 function generateRandomString() {
   return Math.random().toString(36).substr(2, 9);
 }
+
+
+
+
+
+
+
+////place of birth 
+
+import React, { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Button, Grid, Typography, Box, TextField, FormControl, InputLabel, Select, MenuItem, IconButton } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { addPlaceOfBirth, updatePlaceOfBirth, removePlaceOfBirth } from '../store/birthDetailsReducer';
+
+const PlaceOfBirthDetails = () => {
+  const dispatch = useDispatch();
+  const placesOfBirth = useSelector((state) => state.birthDetails.placesOfBirth);
+  const [errorBirth, setErrorBirth] = useState({});
+
+  const handlePlaceOfBirthChange = (id, field, value) => {
+    dispatch(updatePlaceOfBirth(id, field, value));
+    validatePlaceOfBirth(id, { ...placesOfBirth.find((pob) => pob.id === id), [field]: value });
+  };
+
+  const validatePlaceOfBirth = (id, pob) => {
+    let errors = {};
+    if (!pob.country.trim()) {
+      errors.country = "Country is required and cannot be empty or spaces";
+    }
+    if (!pob.city.trim()) {
+      errors.city = "City is required and cannot be empty or spaces";
+    }
+    setErrorBirth((prev) => ({ ...prev, [id]: errors }));
+  };
+
+  const addNewPlaceOfBirth = () => {
+    dispatch(addPlaceOfBirth());
+  };
+
+  return (
+    <Box>
+      <Typography variant="h6" gutterBottom>
+        Place of Birth Details
+      </Typography>
+      {placesOfBirth.map((pob, index) => (
+        <Grid container spacing={2} alignItems="center" key={pob.id}>
+          <Grid item xs={5}>
+            <FormControl fullWidth>
+              <InputLabel>Select country</InputLabel>
+              <Select
+                name="country"
+                value={pob.country}
+                onChange={(e) => handlePlaceOfBirthChange(pob.id, 'country', e.target.value)}
+                label="Select country"
+                error={!!errorBirth[pob.id]?.country}
+              >
+                <MenuItem value="">Select country</MenuItem>
+                <MenuItem value="USA">USA</MenuItem>
+                <MenuItem value="Canada">Canada</MenuItem>
+                <MenuItem value="UK">UK</MenuItem>
+                <MenuItem value="Australia">Australia</MenuItem>
+                <MenuItem value="India">India</MenuItem>
+                <MenuItem value="China">China</MenuItem>
+                <MenuItem value="Germany">Germany</MenuItem>
+              </Select>
+              {errorBirth[pob.id]?.country && (
+                <Typography color="error">{errorBirth[pob.id]?.country}</Typography>
+              )}
+            </FormControl>
+          </Grid>
+          <Grid item xs={5}>
+            <TextField
+              name="city"
+              value={pob.city}
+              onChange={(e) => handlePlaceOfBirthChange(pob.id, 'city', e.target.value)}
+              fullWidth
+              label="Enter city"
+              error={!!errorBirth[pob.id]?.city}
+              helperText={errorBirth[pob.id]?.city}
+            />
+          </Grid>
+          <Grid item xs={1}>
+            {index > 0 && (
+              <IconButton onClick={() => dispatch(removePlaceOfBirth(pob.id))}>
+                <DeleteIcon />
+              </IconButton>
+            )}
+          </Grid>
+        </Grid>
+      ))}
+      <Button variant="outlined" onClick={addNewPlaceOfBirth}>
+        + Add another place
+      </Button>
+    </Box>
+  );
+};
+
+export default PlaceOfBirthDetails;
+
