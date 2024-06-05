@@ -1,0 +1,313 @@
+// deathDetailsReducer.js
+
+const initialDeathState = {
+  datesOfDeath: [{ id: generateRandomString(), year: '', month: '', day: '' }],
+};
+
+// Actions
+const ADD_DATE_OF_DEATH = 'ADD_DATE_OF_DEATH';
+const REMOVE_DATE_OF_DEATH = 'REMOVE_DATE_OF_DEATH';
+const UPDATE_DATE_OF_DEATH = 'UPDATE_DATE_OF_DEATH';
+
+// Action creators
+export const addDateOfDeath = () => ({
+  type: ADD_DATE_OF_DEATH,
+  payload: { id: generateRandomString(), year: '', month: '', day: '' },
+});
+
+export const updateDateOfDeath = (dod) => ({
+  type: UPDATE_DATE_OF_DEATH,
+  payload: dod,
+});
+
+export const removeDateOfDeath = (id) => ({
+  type: REMOVE_DATE_OF_DEATH,
+  payload: id,
+});
+
+// Reducer
+const deathDetailsReducer = (state = initialDeathState, action) => {
+  switch (action.type) {
+    case ADD_DATE_OF_DEATH:
+      return {
+        ...state,
+        datesOfDeath: [...state.datesOfDeath, action.payload],
+      };
+    case UPDATE_DATE_OF_DEATH:
+      return {
+        ...state,
+        datesOfDeath: state.datesOfDeath.map((dod) =>
+          dod.id === action.payload.id ? action.payload : dod
+        ),
+      };
+    case REMOVE_DATE_OF_DEATH:
+      return {
+        ...state,
+        datesOfDeath: state.datesOfDeath.length > 1
+          ? state.datesOfDeath.filter((dod) => dod.id !== action.payload)
+          : state.datesOfDeath,
+      };
+    default:
+      return state;
+  }
+};
+
+export default deathDetailsReducer;
+
+function generateRandomString() {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+
+
+
+// DateDetails.js
+
+import React, { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Button, Grid, Typography, Box, TextField, FormControl, InputLabel, Select, MenuItem, IconButton } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+
+const DateDetails = ({ dateType, addDate, updateDate, removeDate, dates, validateDate }) => {
+  const dispatch = useDispatch();
+  const [errors, setErrors] = useState({});
+
+  const handleDateChange = (id, field, value) => {
+    const updatedDate = dates.find(date => date.id === id);
+    updatedDate[field] = value;
+    setErrors((prevErrors) => ({ ...prevErrors, [id]: {} })); // Clear previous errors
+  };
+
+  const handleDateBlur = (id) => {
+    const validationErrors = validateDate(id);
+    setErrors((prevErrors) => ({ ...prevErrors, [id]: validationErrors }));
+
+    if (Object.keys(validationErrors).length === 0) {
+      const updatedDate = dates.find(date => date.id === id);
+      dispatch(updateDate({ ...updatedDate }));
+    }
+  };
+
+  return (
+    <Box>
+      <Typography variant="h6" gutterBottom>
+        {dateType} Details
+      </Typography>
+      {dates.map((date, index) => (
+        <Grid container spacing={2} alignItems="center" key={date.id}>
+          <Grid item xs={3}>
+            <TextField
+              name="year"
+              value={date.year}
+              onChange={(e) => handleDateChange(date.id, 'year', e.target.value)}
+              onBlur={() => handleDateBlur(date.id)}
+              fullWidth
+              label="Enter year"
+              error={!!errors[date.id]?.year}
+              helperText={errors[date.id]?.year}
+            />
+          </Grid>
+          <Grid item xs={3}>
+            <FormControl fullWidth>
+              <InputLabel>Select month</InputLabel>
+              <Select
+                name="month"
+                value={date.month}
+                onChange={(e) => handleDateChange(date.id, 'month', e.target.value)}
+                onBlur={() => handleDateBlur(date.id)}
+                label="Select month"
+                error={!!errors[date.id]?.month}
+              >
+                <MenuItem value="">Select month</MenuItem>
+                <MenuItem value="1">January</MenuItem>
+                <MenuItem value="2">February</MenuItem>
+                <MenuItem value="3">March</MenuItem>
+                <MenuItem value="4">April</MenuItem>
+                <MenuItem value="5">May</MenuItem>
+                <MenuItem value="6">June</MenuItem>
+                <MenuItem value="7">July</MenuItem>
+                <MenuItem value="8">August</MenuItem>
+                <MenuItem value="9">September</MenuItem>
+                <MenuItem value="10">October</MenuItem>
+                <MenuItem value="11">November</MenuItem>
+                <MenuItem value="12">December</MenuItem>
+              </Select>
+              {errors[date.id]?.month && (
+                <Typography color="error">{errors[date.id]?.month}</Typography>
+              )}
+            </FormControl>
+          </Grid>
+          <Grid item xs={3}>
+            <TextField
+              name="day"
+              value={date.day}
+              onChange={(e) => handleDateChange(date.id, 'day', e.target.value)}
+              onBlur={() => handleDateBlur(date.id)}
+              fullWidth
+              label="Enter day"
+              error={!!errors[date.id]?.day}
+              helperText={errors[date.id]?.day}
+            />
+          </Grid>
+          <Grid item xs={1}>
+            {dates.length > 1 && (
+              <IconButton onClick={() => dispatch(removeDate(date.id))}>
+                <DeleteIcon />
+              </IconButton>
+            )}
+          </Grid>
+        </Grid>
+      ))}
+      <Button variant="outlined" onClick={() => dispatch(addDate())}>
+        + Add another {dateType.toLowerCase()}
+      </Button>
+    </Box>
+  );
+};
+
+export default DateDetails;
+
+
+// DateOfBirthDetails.js
+
+import React from 'react';
+import { useSelector } from 'react-redux';
+import DateDetails from './DateDetails';
+import { addDateOfBirth, updateDateOfBirth, removeDateOfBirth } from '../store/birthDetailsReducer';
+
+const DateOfBirthDetails = () => {
+  const datesOfBirth = useSelector((state) => state.birthDetails.datesOfBirth);
+
+  const validateDateOfBirth = (id) => {
+    let errors = {};
+    const dob = datesOfBirth.find(d => d.id === id);
+
+    const { year, month, day } = dob;
+    const dateStr = `${year}-${month}-${day}`;
+    const dateObj = new Date(dateStr);
+
+    if (year && (isNaN(year) || year < 1900 || year > new Date().getFullYear())) {
+      errors.year = 'Year must be a valid number between 1900 and the current year';
+    }
+    if (month && (isNaN(month) || month < 1 || month > 12)) {
+      errors.month = 'Month must be a valid number between 1 and 12';
+    }
+    if (day && (isNaN(day) || day < 1 || day > 31)) {
+      errors.day = 'Day must be a valid number between 1 and 31';
+    }
+    if (dateObj > new Date()) {
+      errors.year = 'Date cannot be in the future';
+    }
+
+    // Check for duplicate entries
+    if (
+      datesOfBirth.some(
+        (existingDOB) =>
+          existingDOB.id !== dob.id &&
+          existingDOB.year === year &&
+          (!existingDOB.month || existingDOB.month === month) &&
+          (!existingDOB.day || existingDOB.day === day)
+      )
+    ) {
+      errors.year = 'Duplicate date of birth entry';
+    }
+
+    return errors;
+  };
+
+  return (
+    <DateDetails
+      dateType="Date of Birth"
+      dates={datesOfBirth}
+      addDate={addDateOfBirth}
+      updateDate={updateDateOfBirth}
+      removeDate={removeDateOfBirth}
+      validateDate={validateDateOfBirth}
+    />
+  );
+};
+
+export default DateOfBirthDetails;
+
+
+
+// DateOfDeathDetails.js
+
+import React from 'react';
+import { useSelector } from 'react-redux';
+import DateDetails from './DateDetails';
+import { addDateOfDeath, updateDateOfDeath, removeDateOfDeath } from '../store/deathDetailsReducer';
+
+const DateOfDeathDetails = () => {
+  const datesOfBirth = useSelector((state) => state.birthDetails.datesOfBirth);
+  const datesOfDeath = useSelector((state) => state.deathDetails.datesOfDeath);
+
+  const validateDateOfDeath = (id) => {
+    let errors = {};
+    const dod = datesOfDeath.find(d => d.id === id);
+
+    const { year, month, day } = dod;
+    const dateStr = `${year}-${month}-${day}`;
+    const dateObj = new Date(dateStr);
+
+    if (year && (isNaN(year) || year < 1900 || year > new Date().getFullYear())) {
+      errors.year = 'Year must be a valid number between 1900 and the current year';
+    }
+    if (month && (isNaN(month) || month < 1 || month > 12)) {
+      errors.month = 'Month must be a valid number between 1 and 12';
+    }
+    if (day && (isNaN(day) || day < 1 || day > 31)) {
+      errors.day = 'Day must be a valid number between 1 and 31';
+    }
+    if (dateObj > new Date()) {
+      errors.year = 'Date cannot be in the future';
+    }
+
+    // Check for date of death before date of birth
+    const earliestDOB = datesOfBirth.reduce((earliest, dob) => {
+      const dobStr = `${dob.year}-${dob.month}-${dob.day}`;
+      const dobDateObj = new Date(dobStr);
+      return dobDateObj < earliest ? dobDateObj : earliest;
+    }, new Date('9999-12-31'));
+
+    if (year && year < earliestDOB.getFullYear()) {
+      errors.year = 'Date of death cannot be before the earliest date of birth';
+    } else if (year === earliestDOB.getFullYear()) {
+      if (month && (month < (earliestDOB.getMonth() + 1))) {
+        errors.month = 'Date of death cannot be before the earliest date of birth';
+      } else if (month === (earliestDOB.getMonth() + 1)) {
+        if (day && day < earliestDOB.getDate()) {
+          errors.day = 'Date of death cannot be before the earliest date of birth';
+        }
+      }
+    }
+
+    // Check for duplicate entries
+    if (
+      datesOfDeath.some(
+        (existingDOD) =>
+          existingDOD.id !== dod.id &&
+          existingDOD.year === year &&
+          (!existingDOD.month || existingDOD.month === month) &&
+          (!existingDOD.day || existingDOD.day === day)
+      )
+    ) {
+      errors.year = 'Duplicate date of death entry';
+    }
+
+    return errors;
+  };
+
+  return (
+    <DateDetails
+      dateType="Date of Death"
+      dates={datesOfDeath}
+      addDate={addDateOfDeath}
+      updateDate={updateDateOfDeath}
+      removeDate={removeDateOfDeath}
+      validateDate={validateDateOfDeath}
+    />
+  );
+};
+
+export default DateOfDeathDetails;
