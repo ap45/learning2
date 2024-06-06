@@ -93,24 +93,120 @@ export function hrnIdReducer(state = initialHrnIdState, action) {
 }
 
 
+// Initial State
+const initialHrnState = {
+  hrnDetails: [],
+};
+
+// Action Types
+const ADD_HRN = 'ADD_HRN';
+const UPDATE_HRN = 'UPDATE_HRN';
+const RESET_HRN = 'RESET_HRN';
+const DELETE_HRN = 'DELETE_HRN';
+
+// Action Creators
+export const addHrn = (payload) => ({
+  type: ADD_HRN,
+  payload,
+});
+
+export const updateHrn = (payload) => ({
+  type: UPDATE_HRN,
+  payload,
+});
+
+export const resetHrn = () => ({
+  type: RESET_HRN,
+});
+
+export const deleteHrn = (payload) => ({
+  type: DELETE_HRN,
+  payload,
+});
+
+// Reducer
+const hrnDetailsReducer = (state = initialHrnState, action) => {
+  switch (action.type) {
+    case ADD_HRN:
+      return {
+        ...state,
+        hrnDetails: [...state.hrnDetails, action.payload],
+      };
+    case UPDATE_HRN:
+      return {
+        ...state,
+        hrnDetails: state.hrnDetails.map((hrn) =>
+          hrn.id === action.payload.id ? action.payload : hrn
+        ),
+      };
+    case RESET_HRN:
+      return {
+        ...state,
+        hrnDetails: [],
+      };
+    case DELETE_HRN:
+      return {
+        ...state,
+        hrnDetails: state.hrnDetails.filter((hrn) => hrn.id !== action.payload),
+      };
+    default:
+      return state;
+  }
+};
+
+export default hrnDetailsReducer;
+
+// Utility Function
+export function generateRandomString() {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+
+
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Grid, TextField, Button, Select, MenuItem, FormControl, InputLabel, Typography } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { hrnIdAction } from './actions';
+import { addHrn, updateHrn, resetHrn, deleteHrn, generateRandomString } from './hrnDetailsReducer';
 
 const RelationshipsComponent = () => {
-  const [relationType, setRelationType] = useState('');
-  const [relationStatus, setRelationStatus] = useState('');
-  const [profileId, setProfileId] = useState('');
+  const [relationship, setRelationship] = useState({
+    relationType: '',
+    relationStatus: '',
+    profileId: ''
+  });
   const dispatch = useDispatch();
-  const { loading, error, data, flag } = useSelector(state => state.hrnId);
+  const { loading, error, flag, data: apiData } = useSelector(state => state.hrnId);
+  const hrnDetails = useSelector(state => state.hrnDetails.hrnDetails);
 
   const handleAddRelationship = () => {
-    if (profileId) {
-      dispatch(hrnIdAction(profileId));
+    if (relationship.profileId) {
+      dispatch(hrnIdAction(relationship.profileId));
     }
   };
+
+  const handleAddHrnDetail = () => {
+    const newHrn = {
+      id: generateRandomString(),
+      relationType: relationship.relationType,
+      relationStatus: relationship.relationStatus,
+      profileId: relationship.profileId,
+      ...apiData,
+    };
+    dispatch(addHrn(newHrn));
+  };
+
+  const handleDeleteHrnDetail = (id) => {
+    dispatch(deleteHrn(id));
+  };
+
+  // Call handleAddHrnDetail after a successful API call
+  React.useEffect(() => {
+    if (flag && apiData) {
+      handleAddHrnDetail();
+    }
+  }, [flag, apiData]);
 
   return (
     <div style={{ padding: 20 }}>
@@ -119,7 +215,10 @@ const RelationshipsComponent = () => {
         <Grid item xs={12} md={6}>
           <FormControl fullWidth margin="normal">
             <InputLabel>Relation Type</InputLabel>
-            <Select value={relationType} onChange={(e) => setRelationType(e.target.value)}>
+            <Select
+              value={relationship.relationType}
+              onChange={(e) => setRelationship({ ...relationship, relationType: e.target.value })}
+            >
               <MenuItem value="Wife">Wife</MenuItem>
               <MenuItem value="Business associate">Business associate</MenuItem>
               {/* Add other options as needed */}
@@ -127,7 +226,10 @@ const RelationshipsComponent = () => {
           </FormControl>
           <FormControl fullWidth margin="normal">
             <InputLabel>Relationship Status</InputLabel>
-            <Select value={relationStatus} onChange={(e) => setRelationStatus(e.target.value)}>
+            <Select
+              value={relationship.relationStatus}
+              onChange={(e) => setRelationship({ ...relationship, relationStatus: e.target.value })}
+            >
               <MenuItem value="Current">Current</MenuItem>
               <MenuItem value="Past">Past</MenuItem>
               {/* Add other options as needed */}
@@ -137,8 +239,8 @@ const RelationshipsComponent = () => {
             fullWidth
             margin="normal"
             label="Profile ID"
-            value={profileId}
-            onChange={(e) => setProfileId(e.target.value)}
+            value={relationship.profileId}
+            onChange={(e) => setRelationship({ ...relationship, profileId: e.target.value })}
             error={error}
             helperText={error ? "We couldn't find a match. Please check ID." : ""}
           />
@@ -146,19 +248,33 @@ const RelationshipsComponent = () => {
             Validate and Add
           </Button>
         </Grid>
-        {flag && (
+        {hrnDetails.length > 0 && (
           <Grid item xs={12} md={6}>
             <Typography variant="h6">Profile data successfully added:</Typography>
             <div style={{ height: 400, width: '100%' }}>
               <DataGrid
-                rows={data}
+                rows={hrnDetails}
                 columns={[
                   { field: 'relationType', headerName: 'Relation Type', width: 150 },
                   { field: 'profileId', headerName: 'Profile ID', width: 150 },
                   { field: 'lastName', headerName: 'Last Name', width: 150 },
                   { field: 'firstName', headerName: 'First Name', width: 150 },
-                  { field: 'relationshipStatus', headerName: 'Relationship Status', width: 150 },
-                  { field: 'onboardingStatus', headerName: 'Onboarding Status', width: 150 },
+                  { field: 'relationStatus', headerName: 'Relationship Status', width: 150 },
+                  { field: 'obStatus', headerName: 'Onboarding Status', width: 150 },
+                  {
+                    field: 'actions',
+                    headerName: 'Actions',
+                    width: 150,
+                    renderCell: (params) => (
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        onClick={() => handleDeleteHrnDetail(params.row.id)}
+                      >
+                        Delete
+                      </Button>
+                    ),
+                  },
                 ]}
                 pageSize={5}
                 rowsPerPageOptions={[5]}
@@ -172,7 +288,6 @@ const RelationshipsComponent = () => {
 };
 
 export default RelationshipsComponent;
-
 
 .container {
   padding: 20px;
