@@ -1,0 +1,194 @@
+// Action Types
+export const HRN_ID = 'HRN_ID';
+export const HRN_ID_RESET = 'HRN_ID_RESET';
+export const HRN_ID_SUCCESS = 'HRN_ID_SUCCESS';
+export const HRN_ID_FAILURE = 'HRN_ID_FAILURE';
+
+// Action Creators
+export function hrnIdResetAction() {
+  return { type: HRN_ID_RESET };
+}
+
+export function hrnIdInitialAction() {
+  return { type: HRN_ID };
+}
+
+export function hrnIdSuccessAction(payload) {
+  return {
+    type: HRN_ID_SUCCESS,
+    payload,
+  };
+}
+
+export function hrnIdFailureAction(payload) {
+  return {
+    type: HRN_ID_FAILURE,
+    payload,
+  };
+}
+
+// Thunk Action for API Call
+export function hrnIdAction(payload) {
+  return async (dispatch) => {
+    try {
+      dispatch(hrnIdInitialAction());
+      const response = await apiCall({ method: 'get', url: `profiles/${payload}` });
+      dispatch(hrnIdSuccessAction(response.data));
+    } catch (error) {
+      dispatch(hrnIdFailureAction(error.message));
+    }
+  };
+}
+
+
+
+
+
+// Initial State
+const initialHrnIdState = {
+  loading: false,
+  error: false,
+  flag: false,
+  data: [],
+};
+
+// Reducer
+export function hrnIdReducer(state = initialHrnIdState, action) {
+  switch (action.type) {
+    case HRN_ID:
+      return {
+        ...state,
+        loading: true,
+        error: false,
+        flag: false,
+        data: [],
+      };
+    case HRN_ID_RESET:
+      return {
+        ...state,
+        loading: false,
+        error: false,
+        flag: false,
+        data: [],
+      };
+    case HRN_ID_SUCCESS:
+      return {
+        ...state,
+        loading: false,
+        error: false,
+        flag: true,
+        data: action.payload,
+      };
+    case HRN_ID_FAILURE:
+      return {
+        ...state,
+        loading: false,
+        error: true,
+        flag: false,
+        data: [],
+      };
+    default:
+      return state;
+  }
+}
+
+
+import React, { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Grid, TextField, Button, Select, MenuItem, FormControl, InputLabel, Typography } from '@mui/material';
+import { DataGrid } from '@mui/x-data-grid';
+import { hrnIdAction } from './actions';
+
+const RelationshipsComponent = () => {
+  const [relationType, setRelationType] = useState('');
+  const [relationStatus, setRelationStatus] = useState('');
+  const [profileId, setProfileId] = useState('');
+  const dispatch = useDispatch();
+  const { loading, error, data, flag } = useSelector(state => state.hrnId);
+
+  const handleAddRelationship = () => {
+    if (profileId) {
+      dispatch(hrnIdAction(profileId));
+    }
+  };
+
+  return (
+    <div style={{ padding: 20 }}>
+      <Typography variant="h5">Create a new profile for an individual</Typography>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Relation Type</InputLabel>
+            <Select value={relationType} onChange={(e) => setRelationType(e.target.value)}>
+              <MenuItem value="Wife">Wife</MenuItem>
+              <MenuItem value="Business associate">Business associate</MenuItem>
+              {/* Add other options as needed */}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Relationship Status</InputLabel>
+            <Select value={relationStatus} onChange={(e) => setRelationStatus(e.target.value)}>
+              <MenuItem value="Current">Current</MenuItem>
+              <MenuItem value="Past">Past</MenuItem>
+              {/* Add other options as needed */}
+            </Select>
+          </FormControl>
+          <TextField
+            fullWidth
+            margin="normal"
+            label="Profile ID"
+            value={profileId}
+            onChange={(e) => setProfileId(e.target.value)}
+            error={error}
+            helperText={error ? "We couldn't find a match. Please check ID." : ""}
+          />
+          <Button variant="contained" color="primary" onClick={handleAddRelationship} disabled={loading}>
+            Validate and Add
+          </Button>
+        </Grid>
+        {flag && (
+          <Grid item xs={12} md={6}>
+            <Typography variant="h6">Profile data successfully added:</Typography>
+            <div style={{ height: 400, width: '100%' }}>
+              <DataGrid
+                rows={data}
+                columns={[
+                  { field: 'relationType', headerName: 'Relation Type', width: 150 },
+                  { field: 'profileId', headerName: 'Profile ID', width: 150 },
+                  { field: 'lastName', headerName: 'Last Name', width: 150 },
+                  { field: 'firstName', headerName: 'First Name', width: 150 },
+                  { field: 'relationshipStatus', headerName: 'Relationship Status', width: 150 },
+                  { field: 'onboardingStatus', headerName: 'Onboarding Status', width: 150 },
+                ]}
+                pageSize={5}
+                rowsPerPageOptions={[5]}
+              />
+            </div>
+          </Grid>
+        )}
+      </Grid>
+    </div>
+  );
+};
+
+export default RelationshipsComponent;
+
+
+.container {
+  padding: 20px;
+}
+
+.grid-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.grid-item {
+  flex: 1;
+}
+
+.data-grid-container {
+  height: 400px;
+  width: 100%;
+}
