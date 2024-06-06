@@ -184,19 +184,17 @@ const DateOfBirthDetails = () => {
     const dob = datesOfBirth.find(d => d.id === id);
 
     const { year, month, day } = dob;
-    const dateStr = `${year}-${month}-${day}`;
-    const dateObj = new Date(dateStr);
 
-    if (year && (isNaN(year) || year < 1900 || year > new Date().getFullYear())) {
-      errors.year = 'Year must be a valid number between 1900 and the current year';
+    if (year && (!/^\d{4}$/.test(year) || year < 1900 || year > new Date().getFullYear())) {
+      errors.year = 'Year must be a valid 4-digit number between 1900 and the current year';
     }
-    if (month && (isNaN(month) || month < 1 || month > 12)) {
+    if (month && (!/^\d{1,2}$/.test(month) || month < 1 || month > 12)) {
       errors.month = 'Month must be a valid number between 1 and 12';
     }
-    if (day && (isNaN(day) || day < 1 || day > 31)) {
+    if (day && (!/^\d{1,2}$/.test(day) || day < 1 || day > 31)) {
       errors.day = 'Day must be a valid number between 1 and 31';
     }
-    if (dateObj > new Date()) {
+    if (new Date(`${year}-${month || '01'}-${day || '01'}`) > new Date()) {
       errors.year = 'Date cannot be in the future';
     }
 
@@ -239,60 +237,52 @@ import DateDetails from './DateDetails';
 import { addDateOfDeath, updateDateOfDeath, removeDateOfDeath } from '../store/deathDetailsReducer';
 
 const DateOfDeathDetails = () => {
-  const datesOfBirth = useSelector((state) => state.birthDetails.datesOfBirth);
   const datesOfDeath = useSelector((state) => state.deathDetails.datesOfDeath);
+  const datesOfBirth = useSelector((state) => state.birthDetails.datesOfBirth);
 
   const validateDateOfDeath = (id) => {
     let errors = {};
     const dod = datesOfDeath.find(d => d.id === id);
 
     const { year, month, day } = dod;
-    const dateStr = `${year}-${month}-${day}`;
-    const dateObj = new Date(dateStr);
 
-    if (year && (isNaN(year) || year < 1900 || year > new Date().getFullYear())) {
-      errors.year = 'Year must be a valid number between 1900 and the current year';
+    if (year && (!/^\d{4}$/.test(year) || year < 1900 || year > new Date().getFullYear())) {
+      errors.year = 'Year must be a valid 4-digit number between 1900 and the current year';
     }
-    if (month && (isNaN(month) || month < 1 || month > 12)) {
+    if (month && (!/^\d{1,2}$/.test(month) || month < 1 || month > 12)) {
       errors.month = 'Month must be a valid number between 1 and 12';
     }
-    if (day && (isNaN(day) || day < 1 || day > 31)) {
+    if (day && (!/^\d{1,2}$/.test(day) || day < 1 || day > 31)) {
       errors.day = 'Day must be a valid number between 1 and 31';
     }
-    if (dateObj > new Date()) {
+    if (new Date(`${year}-${month || '01'}-${day || '01'}`) > new Date()) {
       errors.year = 'Date cannot be in the future';
     }
 
-    // Check for date of death before date of birth
-    const earliestDOB = datesOfBirth.reduce((earliest, dob) => {
-      const dobStr = `${dob.year}-${dob.month}-${dob.day}`;
-      const dobDateObj = new Date(dobStr);
-      return dobDateObj < earliest ? dobDateObj : earliest;
-    }, new Date('9999-12-31'));
-
-    if (year && year < earliestDOB.getFullYear()) {
-      errors.year = 'Date of death cannot be before the earliest date of birth';
-    } else if (year === earliestDOB.getFullYear()) {
-      if (month && (month < (earliestDOB.getMonth() + 1))) {
-        errors.month = 'Date of death cannot be before the earliest date of birth';
-      } else if (month === (earliestDOB.getMonth() + 1)) {
-        if (day && day < earliestDOB.getDate()) {
-          errors.day = 'Date of death cannot be before the earliest date of birth';
-        }
-      }
+    if (!year && !month && !day) {
+      errors.year = 'Date must include at least a year';
     }
 
-    // Check for duplicate entries
-    if (
-      datesOfDeath.some(
-        (existingDOD) =>
-          existingDOD.id !== dod.id &&
-          existingDOD.year === year &&
-          (!existingDOD.month || existingDOD.month === month) &&
-          (!existingDOD.day || existingDOD.day === day)
-      )
-    ) {
-      errors.year = 'Duplicate date of death entry';
+    if (month && !year) {
+      errors.month = 'Month requires a year';
+    }
+    if (day && !year) {
+      errors.day = 'Day requires a year';
+    }
+
+    // Check for date of death before date of birth
+    for (let dob of datesOfBirth) {
+      const dobYear = dob.year;
+      const dobMonth = dob.month || null;
+      const dobDay = dob.day || null;
+
+      if (
+        (year && dobYear && year < dobYear) ||
+        (year && month && dobYear && dobMonth && year === dobYear && month < dobMonth) ||
+        (year && month && day && dobYear && dobMonth && dobDay && year === dobYear && month === dobMonth && day < dobDay)
+      ) {
+        errors.year = 'Date of death cannot be before the earliest date of birth';
+      }
     }
 
     return errors;
