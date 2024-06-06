@@ -168,6 +168,7 @@ const DateDetails = ({ dateType, addDate, updateDate, removeDate, dates, validat
 export default DateDetails;
 
 
+
 // DateOfBirthDetails.js
 
 import React from 'react';
@@ -228,7 +229,6 @@ const DateOfBirthDetails = () => {
 };
 
 export default DateOfBirthDetails;
-
 
 
 // DateOfDeathDetails.js
