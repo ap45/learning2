@@ -34,10 +34,11 @@ const AttachmentsComponent = () => {
     };
 
     const handleAttachmentsChange = (id, field, value) => {
-        const updatedAttachments = getDocumentAttachments.map((attachment) =>
-            attachment.id === id ? { ...attachment, [field]: value } : attachment
-        );
-        dispatch(updateDocumentAttachments(updatedAttachments));
+        const updatedAttachment = getDocumentAttachments.find(attachment => attachment.id === id);
+        if (updatedAttachment) {
+            updatedAttachment[field] = value;
+            dispatch(updateDocumentAttachments(updatedAttachment));
+        }
     };
 
     const handleSelect = (selectedFiles, id) => {
@@ -48,11 +49,15 @@ const AttachmentsComponent = () => {
     const handleRemove = (index, id) => {
         const updatedFiles = files[id].filter((_, i) => i !== index);
         setFiles((prevFiles) => ({ ...prevFiles, [id]: updatedFiles }));
+        if (updatedFiles.length === 0) {
+            handleAttachmentsChange(id, 'fileName', '');
+            handleAttachmentsChange(id, 'fileInfo', '');
+        }
     };
 
     return (
         <>
-            {getDocumentAttachments.map((attachments, index) => (
+            {getDocumentAttachments.map((attachments) => (
                 <div key={attachments.id}>
                     <div className="input-label">Visibility</div>
                     <div className="input-bar">
