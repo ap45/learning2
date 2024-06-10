@@ -1,0 +1,120 @@
+import React, { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { addDocumentAttachments, updateDocumentAttachments } from './actions'; // Adjust the import path as necessary
+
+const AttachmentsComponent = () => {
+    const dispatch = useDispatch();
+    const getComment = useSelector((state) => state.getComment);
+    const getDocumentAttachments = useSelector((state) => state.getDocumentAttachments);
+
+    const [files, setFiles] = useState({});
+    const [fileInfo, setFileInfo] = useState('');
+
+    const fileIconData = [
+        { extension: 'pdf', icon: FilePdf },
+        { extension: 'mp4', icon: FileMov },
+        { extension: 'xlsx', icon: FileXls },
+        { extension: 'docx', icon: FileDoc },
+    ];
+
+    const handleFileChange = (document, id) => {
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            const arrayBuffer = e.target.result; // This contains the file's content as an ArrayBuffer
+            displayFileInfo(id, arrayBuffer);
+        };
+
+        reader.readAsDataURL(document); // Read the file as an ArrayBuffer
+        handleAttachmentsChange(id, 'fileName', document.name);
+    };
+
+    const displayFileInfo = (id, arrayBuffer) => {
+        handleAttachmentsChange(id, 'fileInfo', arrayBuffer);
+    };
+
+    const handleAttachmentsChange = (id, field, value) => {
+        const updatedAttachments = getDocumentAttachments.map((attachment) =>
+            attachment.id === id ? { ...attachment, [field]: value } : attachment
+        );
+        dispatch(updateDocumentAttachments(updatedAttachments));
+    };
+
+    const handleSelect = (selectedFiles, id) => {
+        setFiles((prevFiles) => ({ ...prevFiles, [id]: selectedFiles }));
+        handleFileChange(selectedFiles[0], id);
+    };
+
+    const handleRemove = (index, id) => {
+        const updatedFiles = files[id].filter((_, i) => i !== index);
+        setFiles((prevFiles) => ({ ...prevFiles, [id]: updatedFiles }));
+    };
+
+    return (
+        <>
+            {getDocumentAttachments.map((attachments, index) => (
+                <div key={attachments.id}>
+                    <div className="input-label">Visibility</div>
+                    <div className="input-bar">
+                        <Dropdown
+                            id="dropdown-search-example"
+                            labelBeforeSelect="Select Visibility"
+                            spaceSaving
+                            selectedItemId={attachments.visibility}
+                            onChange={(e) => handleAttachmentsChange(attachments.id, 'visibility', e.selectedItemId)}
+                            width="196px"
+                        >
+                            {VISIBILITY_TYPES.map((menu) => (
+                                <DropdownOption key={menu.value} itemId={menu.value}>
+                                    {menu.label}
+                                </DropdownOption>
+                            ))}
+                        </Dropdown>
+                    </div>
+
+                    <div className="attachment-upload">
+                        <FileUpload
+                            label="Upload a file"
+                            helpText="Drag and drop a file here to attach, or"
+                            icon={<Upload16px />}
+                            browseButtonText="Browse"
+                            onSelect={(e) => handleSelect(e, attachments.id)}
+                        />
+                        {files[attachments.id] && files[attachments.id].length > 0 && (
+                            <FileUpload.FileList fileIcons={fileIconData} onRemove={(index) => handleRemove(index, attachments.id)}>
+                                {files[attachments.id].map((file, index) => (
+                                    <FileUpload.FileList.Item id={index} key={index} name={file.name} size={file.size} />
+                                ))}
+                            </FileUpload.FileList>
+                        )}
+                    </div>
+
+                    <div className="input-label">Comment</div>
+                    <div className="input-bar">
+                        <TextArea
+                            noResize
+                            width={746}
+                            height={attachments.comment.length > 1000 ? undefined : 100}
+                            onChange={(e) => handleAttachmentsChange(attachments.id, 'comment', e.target.value)}
+                        />
+                    </div>
+
+                    <div className="section-divider-comments"></div>
+                </div>
+            ))}
+
+            <div className="add-other-attachment">
+                <Button
+                    type={Button.type.MUTED_ICON_EMPHASIS}
+                    icon={<MarkPlus16px />}
+                    onClick={() => dispatch(addDocumentAttachments())}
+                    aria-label="Add Other Names"
+                >
+                    <span className="button-title">Add Another Attachment</span>
+                </Button>
+            </div>
+        </>
+    );
+};
+
+export default AttachmentsComponent;
