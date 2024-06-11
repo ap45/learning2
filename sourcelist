@@ -1,0 +1,176 @@
+// Actions
+const FETCH_OBSTATUS = "FETCH_OBSTATUS";
+const FETCH_OBSTATUS_SUCCESS = "FETCH_OBSTATUS_SUCCESS";
+const FETCH_OBSTATUS_FAILURE = "FETCH_OBSTATUS_FAILURE";
+
+// Action Creators
+export const fetchObstatusInitialAction = () => ({
+    type: FETCH_OBSTATUS,
+});
+
+export const fetchObstatusSuccessAction = (payload) => ({
+    type: FETCH_OBSTATUS_SUCCESS,
+    payload,
+});
+
+export const fetchObstatusFailureAction = (error) => ({
+    type: FETCH_OBSTATUS_FAILURE,
+    error,
+});
+
+// Async Action
+export const fetchObstatusAction = (payload) => {
+    return async (dispatch) => {
+        dispatch(fetchObstatusInitialAction());
+
+        try {
+            const response = await apiCall({
+                method: "post",
+                url: "/profiles/obstatus",
+                data: payload,
+            });
+            dispatch(fetchObstatusSuccessAction(response));
+        } catch (error) {
+            dispatch(fetchObstatusFailureAction(error.message));
+        }
+    };
+};
+
+// Initial State
+const initialObstatusState = {
+    loading: false,
+    error: false,
+    data: {
+        srcListOnboardingStatusList: [],
+        effectiveObStatus: "",
+    },
+};
+
+// Reducer
+export const obstatusReducer = (state = initialObstatusState, action) => {
+    switch (action.type) {
+        case FETCH_OBSTATUS:
+            return {
+                ...state,
+                loading: true,
+                error: false,
+            };
+        case FETCH_OBSTATUS_SUCCESS:
+            return {
+                ...state,
+                loading: false,
+                data: action.payload,
+            };
+        case FETCH_OBSTATUS_FAILURE:
+            return {
+                ...state,
+                loading: false,
+                error: action.error,
+            };
+        default:
+            return state;
+    }
+};
+
+
+
+const handleSourceListChange = async (id, field, value) => {
+    const updatedSL = sourceListObject.find(sl => sl.id === id);
+    updatedSL[field] = value;
+
+    setErrorSourceList((prevErrors) => ({ ...prevErrors, [id]: {} }));
+
+    // Dispatching the action to fetch onboarding status
+    const slIdList = sourceListObject.map(sl => sl.id);
+    dispatch(fetchObstatusAction({ slIdList }));
+};
+
+
+
+
+import { useSelector } from "react-redux";
+
+const SourceListComponent = () => {
+    const sourceList = useSelector((state) => state.sourceList);
+    const obstatusData = useSelector((state) => state.obstatus.data);
+
+    return (
+        <div>
+            {sourceList.map((sl, index) => {
+                const obStatusObj = obstatusData.srcListOnboardingStatusList.find(
+                    (status) => status.slId === sl.id
+                );
+                const obStatus = obStatusObj ? obStatusObj.obStatus : "--";
+                const effectiveObStatus = obstatusData.effectiveObStatus;
+
+                return (
+                    <div key={index}>
+                        <Grid style={{ paddingLeft: 47px }} horizontalGutter={16}>
+                            <Grid.Col xs={2.5}>
+                                <div className="input-bar">
+                                    <Dropdown
+                                        id="dropdown-search-example"
+                                        label="Select Category"
+                                        selectedItemId={sl.sourceList}
+                                        onChange={(e) =>
+                                            handleSourceListChange(sl.id, "sourceList", e.selectedItemId)
+                                        }
+                                        width="415px"
+                                        labelBeforeSelect="Select a Category"
+                                        labelAfterSelect=""
+                                        spaceSaving
+                                    >
+                                        {sourceListCategoryType.map((menu) => (
+                                            <DropdownOption key={menu.id} itemId={menu.id}>
+                                                {menu?.name}
+                                            </DropdownOption>
+                                        ))}
+                                    </Dropdown>
+                                </div>
+                            </Grid.Col>
+                            <Grid.Col xs={1.5}>
+                                <div className="on-boarding-status-container">
+                                    <Tag
+                                        color={Tag.color.CHOICE.SELECTED}
+                                        cssModule={{ container: classNames("on-boarding-tag") }}
+                                    >
+                                        On Boarding Status: {obStatus}
+                                    </Tag>
+                                    {index === 0 && (
+                                        <Tag
+                                            color={Tag.color.CHOICE.SELECTED}
+                                            cssModule={{ container: classNames("effective-onboarding-tag") }}
+                                        >
+                                            Effective On Boarding Status: {effectiveObStatus}
+                                        </Tag>
+                                    )}
+                                </div>
+                            </Grid.Col>
+                            <Grid.Col xs={1}>
+                                {sourceList.length > 1 && (
+                                    <Button
+                                        onClick={() => dispatch(deleteSourceList(sl.id))}
+                                        size={Button.size.LARGE}
+                                        type={Button.type.MUTED}
+                                        icon={<Bin24px />}
+                                    >
+                                    </Button>
+                                )}
+                            </Grid.Col>
+                        </Grid>
+                    </div>
+                );
+            })}
+            <div className="other-name-button">
+                <Button
+                    type={Button.type.MUTED_ICON_EMPHASIS}
+                    icon={<MarkPlus16px />}
+                    onClick={() => dispatch(addSourceList())}
+                    aria-label="Add Other Names"
+                >
+                    <span className="button-title">Add Other Source List</span>
+                </Button>
+            </div>
+        </div>
+    );
+};
