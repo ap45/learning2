@@ -1,3 +1,39 @@
+case UPDATE_SOURCE_LIST:
+            let updatedSourceList;
+            if (Array.isArray(action.payload)) {
+                // If payload is an array, update multiple source list items
+                updatedSourceList = state.sourcelist.map(sourcelist => {
+                    const updatedItem = action.payload.find(sl => sl.id === sourcelist.id);
+                    return updatedItem ? updatedItem : sourcelist;
+                });
+            } else {
+                // If payload is a single object, update a single source list item
+                updatedSourceList = state.sourcelist.map(sourcelist =>
+                    sourcelist.id === action.payload.id ? action.payload : sourcelist
+                );
+            }
+            return {
+                ...state,
+                sourcelist: updatedSourceList,
+            };
+        case DELETE_SOURCE_LIST:
+            let filteredSourceList;
+            if (Array.isArray(action.payload)) {
+                // If payload is an array, delete multiple source list items
+                filteredSourceList = state.sourcelist.filter(sourcelist =>
+                    !action.payload.includes(sourcelist.id)
+                );
+            } else {
+                // If payload is a single ID, delete a single source list item
+                filteredSourceList = state.sourcelist.filter(
+                    sourcelist => sourcelist.id !== action.payload
+                );
+            }
+            return {
+                ...state,
+                sourcelist: filteredSourceList,
+            };
+
 // Actions
 const FETCH_OBSTATUS = "FETCH_OBSTATUS";
 const FETCH_OBSTATUS_SUCCESS = "FETCH_OBSTATUS_SUCCESS";
