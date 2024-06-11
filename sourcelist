@@ -75,24 +75,25 @@ export const obstatusReducer = (state = initialObstatusState, action) => {
 
 
 const handleSourceListChange = async (id, field, value) => {
-    const updatedSL = sourceListObject.find(sl => sl.id === id);
-    updatedSL[field] = value;
+    // Update the specific source list item with the new value
+    const updatedSourceList = sourceListObject.map(sl => {
+        if (sl.id === id) {
+            return { ...sl, [field]: value };
+        }
+        return sl;
+    });
 
     setErrorSourceList((prevErrors) => ({ ...prevErrors, [id]: {} }));
     dispatch(backDropLoaderOpenAction());
 
-    // Get the list of slIds from the current state
-    const slIdList = sourceListObject.map(sl => sl.sourceListId);
-    // Add the new value if it's not already in the list
-    if (!slIdList.includes(value)) {
-        slIdList.push(value);
-    }
+    // Get the list of slIds from the updated state
+    const slIdList = updatedSourceList.map(sl => sl.sourceListId);
 
     // Fetch the onboarding status for all slIds
     const obStatusData = await dispatch(fetchObstatusAction(slIdList));
 
     // Update the source list with the new obStatus
-    const updatedSourceList = sourceListObject.map(sl => {
+    const updatedSourceListWithStatus = updatedSourceList.map(sl => {
         const status = obStatusData.srcListOnboardingStatusList.find(s => s.slId === sl.sourceListId);
         return {
             ...sl,
@@ -100,21 +101,20 @@ const handleSourceListChange = async (id, field, value) => {
         };
     });
 
-    // Set effective ob status once in the state
-    const effectiveObStatus = obStatusData.effectiveObStatus;
-
     // Dispatch the updated source list to the Redux store
-    dispatch(updateSourceList(updatedSourceList));
+    dispatch(updateSourceList(updatedSourceListWithStatus));
 
     dispatch(backDropLoaderCloseAction());
-    console.log(updatedSourceList);
+    console.log(updatedSourceListWithStatus);
 
     // Additional logic to handle the effectiveObStatus tag
+    const effectiveObStatus = obStatusData.effectiveObStatus;
     if (effectiveObStatus) {
         // Handle displaying the effective onboarding status
         console.log("Effective Onboarding Status:", effectiveObStatus);
     }
 };
+
 
 
 <Dropdown
