@@ -79,88 +79,116 @@ const handleSourceListChange = async (id, field, value) => {
     updatedSL[field] = value;
 
     setErrorSourceList((prevErrors) => ({ ...prevErrors, [id]: {} }));
+    dispatch(backDropLoaderOpenAction());
 
-    // Dispatching the action to fetch onboarding status
-    const slIdList = sourceListObject.map(sl => sl.id);
-    dispatch(fetchObstatusAction({ slIdList }));
+    // Get the list of slIds from the current state
+    const slIdList = sourceListObject.map(sl => sl.sourceListId);
+    // Add the new value if it's not already in the list
+    if (!slIdList.includes(value)) {
+        slIdList.push(value);
+    }
+
+    // Fetch the onboarding status for all slIds
+    const obStatusData = await dispatch(fetchObstatusAction(slIdList));
+
+    // Update the source list with the new obStatus
+    const updatedSourceList = sourceListObject.map(sl => {
+        const status = obStatusData.srcListOnboardingStatusList.find(s => s.slId === sl.sourceListId);
+        return {
+            ...sl,
+            obStatus: status ? status.obStatus : sl.obStatus,
+        };
+    });
+
+    // Set effective ob status once in the state
+    const effectiveObStatus = obStatusData.effectiveObStatus;
+
+    // Dispatch the updated source list to the Redux store
+    dispatch(updateSourceList(updatedSourceList));
+
+    dispatch(backDropLoaderCloseAction());
+    console.log(updatedSourceList);
+
+    // Additional logic to handle the effectiveObStatus tag
+    if (effectiveObStatus) {
+        // Handle displaying the effective onboarding status
+        console.log("Effective Onboarding Status:", effectiveObStatus);
+    }
 };
 
 
+<Dropdown
+    id="dropdown-search-example"
+    label="Select Category"
+    selectedItemId={sl.sourceList}
+    onChange={(e) => handleSourceListChange(sl.id, 'sourceList', e.selectedItemId)}
+    width='415px'
+    labelBeforeSelect="Select a Category"
+    labelAfterSelect=""
+    spaceSaving
+>
+    {sourceListCategoryType.map((menu) => (
+        <DropdownOption key={menu.id} itemId={menu.id}>
+            {menu?.name}
+        </DropdownOption>
+    ))}
+</Dropdown>
 
+// Render the effective onboarding status tag only once
+{sourceListObject.length > 0 && (
+    <Tag color={Tag.color.CHOICE.SELECTED} cssModule={{ container: classNames("effective-onboarding-tag") }}>
+        Effective Onboarding Status: {effectiveObStatus}
+    </Tag>
+)}
 
-import { useSelector } from "react-redux";
-
-const SourceListComponent = () => {
-    const sourceList = useSelector((state) => state.sourceList);
-    const obstatusData = useSelector((state) => state.obstatus.data);
-
-    return (
-        <div>
-            {sourceList.map((sl, index) => {
-                const obStatusObj = obstatusData.srcListOnboardingStatusList.find(
-                    (status) => status.slId === sl.id
-                );
-                const obStatus = obStatusObj ? obStatusObj.obStatus : "--";
-                const effectiveObStatus = obstatusData.effectiveObStatus;
-
-                return (
-                    <div key={index}>
-                        <Grid style={{ paddingLeft: 47px }} horizontalGutter={16}>
-                            <Grid.Col xs={2.5}>
-                                <div className="input-bar">
-                                    <Dropdown
-                                        id="dropdown-search-example"
-                                        label="Select Category"
-                                        selectedItemId={sl.sourceList}
-                                        onChange={(e) =>
-                                            handleSourceListChange(sl.id, "sourceList", e.selectedItemId)
-                                        }
-                                        width="415px"
-                                        labelBeforeSelect="Select a Category"
-                                        labelAfterSelect=""
-                                        spaceSaving
-                                    >
-                                        {sourceListCategoryType.map((menu) => (
-                                            <DropdownOption key={menu.id} itemId={menu.id}>
-                                                {menu?.name}
-                                            </DropdownOption>
-                                        ))}
-                                    </Dropdown>
-                                </div>
-                            </Grid.Col>
-                            <Grid.Col xs={1.5}>
-                                <div className="on-boarding-status-container">
-                                    <Tag
-                                        color={Tag.color.CHOICE.SELECTED}
-                                        cssModule={{ container: classNames("on-boarding-tag") }}
-                                    >
-                                        On Boarding Status: {obStatus}
-                                    </Tag>
-                                    {index === 0 && (
-                                        <Tag
-                                            color={Tag.color.CHOICE.SELECTED}
-                                            cssModule={{ container: classNames("effective-onboarding-tag") }}
-                                        >
-                                            Effective On Boarding Status: {effectiveObStatus}
-                                        </Tag>
-                                    )}
-                                </div>
-                            </Grid.Col>
-                            <Grid.Col xs={1}>
-                                {sourceList.length > 1 && (
-                                    <Button
-                                        onClick={() => dispatch(deleteSourceList(sl.id))}
-                                        size={Button.size.LARGE}
-                                        type={Button.type.MUTED}
-                                        icon={<Bin24px />}
-                                    >
-                                    </Button>
-                                )}
-                            </Grid.Col>
-                        </Grid>
-                    </div>
-                );
-            })}
+{sourceListObject.map((sl, index) => (
+    <div key={sl.id}>
+        <Grid style={{ paddingLeft: 47px }} horizontalGutter={16}>
+            <Grid.Col xs={2.5}>
+                <div className="input-bar">
+                    <Dropdown
+                        id="dropdown-search-example"
+                        label="Select Category"
+                        selectedItemId={sl.sourceList}
+                        onChange={(e) => handleSourceListChange(sl.id, 'sourceList', e.selectedItemId)}
+                        width='415px'
+                        labelBeforeSelect="Select a Category"
+                        labelAfterSelect=""
+                        spaceSaving
+                    >
+                        {sourceListCategoryType.map((menu) => (
+                            <DropdownOption key={menu.id} itemId={menu.id}>
+                                {menu?.name}
+                            </DropdownOption>
+                        ))}
+                    </Dropdown>
+                </div>
+            </Grid.Col>
+            <Grid.Col xs={1.5}>
+                <div className="on-boarding-status-container">
+                    {sl.obStatus.length > 0 ? (
+                        <Tag color={Tag.color.CHOICE.SELECTED} cssModule={{ container: classNames("on-boarding-tag") }}>
+                            On Boarding Status: {sl.obStatus}
+                        </Tag>
+                    ) : (
+                        <Tag color={Tag.color.FEATURE.GINGER} cssModule={{ container: classNames("on-boarding-tag") }}>
+                            On Boarding Status --
+                        </Tag>
+                    )}
+                </div>
+            </Grid.Col>
+            <Grid.Col xs={1}>
+                <div>
+                    {sourceListObject.length > 1 && (
+                        <Button
+                            onClick={() => dispatch(deleteSourcelist(sl.id))}
+                            size={Button.size.LARGE}
+                            type={Button.type.MUTED}
+                            icon={<Bin24px />}
+                        />
+                    )}
+                </div>
+            </Grid.Col>
             <div className="other-name-button">
                 <Button
                     type={Button.type.MUTED_ICON_EMPHASIS}
@@ -168,9 +196,9 @@ const SourceListComponent = () => {
                     onClick={() => dispatch(addSourceList())}
                     aria-label="Add Other Names"
                 >
-                    <span className="button-title">Add Other Source List</span>
+                    <span className='button-title'>Add Other Source List</span>
                 </Button>
             </div>
-        </div>
-    );
-};
+        </Grid>
+    </div>
+))}
