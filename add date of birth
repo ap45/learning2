@@ -579,3 +579,94 @@ function generateRandomString() {
   return Math.random().toString(36).substr(2, 9);
 }
 
+
+
+
+
+
+import React from 'react';
+import { useSelector } from 'react-redux';
+import DateDetails from './DateDetails';
+import { addDateOfDeath, updateDateOfDeath, removeDateOfDeath } from '../store/deathDetailsReducer';
+
+const DateOfDeathDetails = () => {
+  const datesOfDeath = useSelector((state) => state.deathDetails.datesOfDeath);
+  const datesOfBirth = useSelector((state) => state.birthDetails.datesOfBirth);
+
+  const isLeapYear = (year) => {
+    return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+  };
+
+  const validateDateOfDeath = (id) => {
+    let errors = {};
+    const dod = datesOfDeath.find(d => d.id === id);
+
+    const { year, month, day } = dod;
+
+    if (year && (!/^\d{4}$/.test(year) || year < 1900 || year > new Date().getFullYear())) {
+      errors.year = 'Year must be a valid 4-digit number between 1900 and the current year';
+    }
+    if (month && (!/^\d{1,2}$/.test(month) || month < 1 || month > 12)) {
+      errors.month = 'Month must be a valid number between 1 and 12';
+    }
+    if (day && (!/^\d{1,2}$/.test(day) || day < 1 || day > 31)) {
+      errors.day = 'Day must be a valid number between 1 and 31';
+    }
+    
+    // Additional checks for invalid dates like April 31, February 30, etc.
+    if (year && month && day) {
+      const maxDaysInMonth = {
+        1: 31, 2: isLeapYear(year) ? 29 : 28, 3: 31, 4: 30, 5: 31,
+        6: 30, 7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31
+      };
+      if (day > maxDaysInMonth[month]) {
+        errors.day = `Day must be valid for the given month/year combination (e.g., no September 31 or February 30)`;
+      }
+    }
+
+    if (new Date(`${year}-${month || '01'}-${day || '01'}`) > new Date()) {
+      errors.year = 'Date cannot be in the future';
+    }
+
+    if (!year && !month && !day) {
+      errors.year = 'Date must include at least a year';
+    }
+
+    if (month && !year) {
+      errors.month = 'Month requires a year';
+    }
+    if (day && !year) {
+      errors.day = 'Day requires a year';
+    }
+
+    // Check for date of death before date of birth
+    for (let dob of datesOfBirth) {
+      const dobYear = dob.year;
+      const dobMonth = dob.month || null;
+      const dobDay = dob.day || null;
+
+      if (
+        (year && dobYear && year < dobYear) ||
+        (year && month && dobYear && dobMonth && year === dobYear && month < dobMonth) ||
+        (year && month && day && dobYear && dobMonth && dobDay && year === dobYear && month === dobMonth && day < dobDay)
+      ) {
+        errors.year = 'Date of death cannot be before the earliest date of birth';
+      }
+    }
+
+    return errors;
+  };
+
+  return (
+    <DateDetails
+      dateType="Date of Death"
+      dates={datesOfDeath}
+      addDate={addDateOfDeath}
+      updateDate={updateDateOfDeath}
+      removeDate={removeDateOfDeath}
+      validateDate={validateDateOfDeath}
+    />
+  );
+};
+
+export default DateOfDeathDetails;
