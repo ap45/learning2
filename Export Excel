@@ -194,6 +194,9 @@ public class ExcelUtil {
         specifiedColumns.put("creationDate", "Creation Date");
         specifiedColumns.put("updatedDate", "Updated Date");
 
+        // List of keys to exclude from the Excel output
+        Set<String> excludedKeys = new HashSet<>(Arrays.asList("totalRows", "AlterId", "id"));
+
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
 
@@ -230,14 +233,14 @@ public class ExcelUtil {
                 List<String> orderedHeaders = new ArrayList<>();
 
                 for (Map.Entry<String, String> entry : specifiedColumns.entrySet()) {
-                    if (allKeys.contains(entry.getKey())) {
+                    if (allKeys.contains(entry.getKey()) && !excludedKeys.contains(entry.getKey())) {
                         orderedKeys.add(entry.getKey());
                         orderedHeaders.add(entry.getValue());
                     }
                 }
 
                 for (String key : allKeys) {
-                    if (!specifiedColumns.containsKey(key)) {
+                    if (!specifiedColumns.containsKey(key) && !excludedKeys.contains(key)) {
                         orderedKeys.add(key);
                         orderedHeaders.add(formatHeader(key));
                     }
