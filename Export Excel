@@ -161,7 +161,6 @@ public class ExcelPayload {
 
 
 ///////// new Logic ////////////
-
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.http.HttpStatus;
@@ -179,21 +178,21 @@ public class ExcelUtil {
         String exportedBy = payload.getUser();
         String exportedAt = LocalDateTime.now().toString();
 
-        // Mapping of original column names to new column headers
-        LinkedHashMap<String, String> columnMapping = new LinkedHashMap<>();
-        columnMapping.put("profileID", "Profile ID");
-        columnMapping.put("firstName", "First Name");
-        columnMapping.put("lastName", "Last Name");
-        columnMapping.put("ownershipDivision", "Owner Division");
-        columnMapping.put("onboardingCategory", "On Boarding Status");
-        columnMapping.put("dob", "Date of Birth");
-        columnMapping.put("sourceListName", "Source List Name");
-        columnMapping.put("nationalities", "Nationalities");
-        columnMapping.put("status", "Status");
-        columnMapping.put("complianceUnit", "Compliance Unit");
-        columnMapping.put("domicile", "Domicile");
-        columnMapping.put("creationDate", "Creation Date");
-        columnMapping.put("updatedDate", "Updated Date");
+        // Mapping of original column names to new column headers and their sequence
+        LinkedHashMap<String, String> specifiedColumns = new LinkedHashMap<>();
+        specifiedColumns.put("profileID", "Profile ID");
+        specifiedColumns.put("firstName", "First Name");
+        specifiedColumns.put("lastName", "Last Name");
+        specifiedColumns.put("ownershipDivision", "Owner Division");
+        specifiedColumns.put("onboardingCategory", "On Boarding Status");
+        specifiedColumns.put("dob", "Date of Birth");
+        specifiedColumns.put("sourceListName", "Source List Name");
+        specifiedColumns.put("nationalities", "Nationalities");
+        specifiedColumns.put("status", "Status");
+        specifiedColumns.put("complianceUnit", "Compliance Unit");
+        specifiedColumns.put("domicile", "Domicile");
+        specifiedColumns.put("creationDate", "Creation Date");
+        specifiedColumns.put("updatedDate", "Updated Date");
 
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
@@ -221,26 +220,49 @@ public class ExcelUtil {
             // Leave third row empty
             sheet.createRow(2);
 
-            // Extract headers and create header row with yellow background
-            Row headerRow = sheet.createRow(3);
-            int headerIndex = 0;
-            for (Map.Entry<String, String> entry : columnMapping.entrySet()) {
-                Cell headerCell = headerRow.createCell(headerIndex++);
-                headerCell.setCellValue(entry.getValue());
-                headerCell.setCellStyle(headerStyle);
-            }
+            if (!data.isEmpty()) {
+                // Extract headers from the data
+                Map<String, Object> firstRow = data.get(0);
+                Set<String> allKeys = firstRow.keySet();
 
-            // Populate data rows
-            for (int rowIndex = 0; rowIndex < data.size(); rowIndex++) {
-                Row dataRow = sheet.createRow(rowIndex + 4);
-                Map<String, Object> rowData = data.get(rowIndex);
+                // Collect headers in order: specified columns first, then the rest
+                List<String> orderedKeys = new ArrayList<>();
+                List<String> orderedHeaders = new ArrayList<>();
 
-                int cellIndex = 0;
-                for (String key : columnMapping.keySet()) {
-                    Cell cell = dataRow.createCell(cellIndex++);
-                    Object value = rowData.get(key);
-                    if (value != null) {
-                        cell.setCellValue(value.toString());
+                for (Map.Entry<String, String> entry : specifiedColumns.entrySet()) {
+                    if (allKeys.contains(entry.getKey())) {
+                        orderedKeys.add(entry.getKey());
+                        orderedHeaders.add(entry.getValue());
+                    }
+                }
+
+                for (String key : allKeys) {
+                    if (!specifiedColumns.containsKey(key)) {
+                        orderedKeys.add(key);
+                        orderedHeaders.add(formatHeader(key));
+                    }
+                }
+
+                // Create header row with yellow background
+                Row headerRow = sheet.createRow(3);
+                for (int i = 0; i < orderedHeaders.size(); i++) {
+                    Cell headerCell = headerRow.createCell(i);
+                    headerCell.setCellValue(orderedHeaders.get(i));
+                    headerCell.setCellStyle(headerStyle);
+                }
+
+                // Populate data rows
+                for (int rowIndex = 0; rowIndex < data.size(); rowIndex++) {
+                    Row dataRow = sheet.createRow(rowIndex + 4);
+                    Map<String, Object> rowData = data.get(rowIndex);
+
+                    int cellIndex = 0;
+                    for (String key : orderedKeys) {
+                        Cell cell = dataRow.createCell(cellIndex++);
+                        Object value = rowData.get(key);
+                        if (value != null) {
+                            cell.setCellValue(value.toString());
+                        }
                     }
                 }
             }
@@ -260,17 +282,19 @@ public class ExcelUtil {
         }
     }
 
-    // Helper method to convert string to camel case
-    private static String toCamelCase(String s) {
-        String[] parts = s.split("_");
-        StringBuilder camelCaseString = new StringBuilder(parts[0]);
-        for (int i = 1; i < parts.length; i++) {
-            camelCaseString.append(Character.toUpperCase(parts[i].charAt(0)));
-            if (parts[i].length() > 1) {
-                camelCaseString.append(parts[i].substring(1));
+    // Helper method to format headers
+    private static String formatHeader(String header) {
+        // Convert underscore to spaces and capitalize each word
+        String[] parts = header.split("_");
+        StringBuilder formattedHeader = new StringBuilder();
+        for (String part : parts) {
+            if (formattedHeader.length() > 0) {
+                formattedHeader.append(" ");
             }
+            formattedHeader.append(Character.toUpperCase(part.charAt(0)));
+            formattedHeader.append(part.substring(1).toLowerCase());
         }
-        return camelCaseString.toString();
+        return formattedHeader.toString();
     }
 
     // Exception for generation errors
@@ -280,4 +304,3 @@ public class ExcelUtil {
         }
     }
 }
-
